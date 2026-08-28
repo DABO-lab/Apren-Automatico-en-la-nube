@@ -25,4 +25,15 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
+# Datos (crudos y procesados): no se versionan, se regeneran
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow
+mlruns/
+mlflow.db
