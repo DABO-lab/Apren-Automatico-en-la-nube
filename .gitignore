@@ -37,3 +37,6 @@ data/processed/*
 # MLflow
 mlruns/
 mlflow.db
+
+# Analisis desechables (no se versionan)
+scratch/

@@ -51,3 +51,18 @@ EXPECTED_COLUMNS = [
 # tiempo. Este es el nombre que usaremos para la variable objetivo.
 TARGET_COLUMN = "duracion_min"
 ID_COLUMN = "ride_id"
+
+# --- Reglas de limpieza -----------------------------------------------------
+# Los umbrales NO son inventados: salen del diagnóstico de los datos crudos
+# (ver la sección de calidad en notebooks/01-carga-y-eda.ipynb).
+
+# Un viaje de más de 24 horas no es un viaje: es una bicicleta no devuelta.
+MAX_DURACION_MIN = 24 * 60
+
+# Sacar la bici, ver que está dañada y devolverla en el mismo sitio produce un
+# "viaje" de menos de 2 minutos que empieza y termina en la misma estación.
+UMBRAL_FALSO_VIAJE_MIN = 2
+
+# Columnas que describen dónde terminó el viaje. Si falta alguna, no sabemos
+# a dónde llegó la bicicleta.
+END_COLUMNS = ["end_station_id", "end_station_name", "end_lat", "end_lng"]

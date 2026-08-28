@@ -5,9 +5,10 @@ setup:
 	uv sync
 	uv run pre-commit install
 
-# Lee el CSV crudo de Citi Bike y muestra su ficha tecnica (filas, nulos, rangos)
+# Lee el CSV crudo, muestra su ficha tecnica y lo limpia: raw -> processed
 data:
 	uv run python -m trips.data.load
+	uv run python -m trips.data.clean
 
 # Revisa y formatea el codigo con ruff
 lint:
