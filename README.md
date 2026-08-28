@@ -13,22 +13,39 @@
 <h6 style="text-align: rigth; margin-bottom: 5px">
 <b>INTEGRANTES:</b> Bueno Osorno Dubian Andres
 - Ceballos Bedoya Catherine - Rivera Guzman Yesenia - Salazar Seguro Maria Jimena
- <br><b>FECHA:</b> 03-2026<br>
+ <br><b>FECHA:</b> 08-2026<br>
 </h6>
 </div>
 
 ---
 
-## ¿De qué va este proyecto?
+## ¿De qué se trata nuestro proyecto?
 
-Predecir **cuánto va a durar un viaje en bicicleta** con los datos abiertos de
-Citi Bike (Jersey City y Hoboken, julio de 2026: 109.095 viajes). Es un problema
-de **regresión**: la variable objetivo son minutos.
+Decidimos trabajar con datos de Citibike (un sistema de transporte de bicicletas compartidas). La idea principal es resolver un problema muy común en logística urbana: **predecir cuánto tiempo va a durar el viaje de un usuario**.
 
-El archivo no trae la duración: hay que construirla a partir de `started_at` y
-`ended_at`. Esa construcción de variables es parte del análisis, no un trámite previo.
+Es un problema de **regresión**: la variable a predecir es continua (minutos). Un detalle importante del encuadre: el archivo no trae una columna de duración, hay que **construirla** a partir de las marcas de tiempo. Esa construcción de variables es parte del análisis, no un trámite previo.
 
-## Estructura
+## Los datos que vamos a usar
+
+Estamos utilizando el dataset **JC-202607-citibike-tripdata.csv** que corresponde a los viajes de julio de 2026 en Jersey City y Hoboken (109.095 registros × 13 columnas). Este archivo nos entrega información clave como:
+
+* La fecha y hora exacta en la que empieza y termina cada viaje
+* Las estaciones de origen y destino con sus respectivas coordenadas
+* El tipo de bicicleta (por ejemplo si es eléctrica)
+* Si la persona que alquila es miembro suscrito o un usuario casual
+
+> **Nota:** El archivo CSV original no está subido directamente a este repositorio para no saturar el peso y mantener las buenas prácticas de Git.
+
+## Nuestro verdadero reto
+
+Más allá de lograr un modelo matemático con una precisión perfecta, lo que queremos en este proyecto es poner a prueba el ciclo de vida completo de machine learning. Básicamente vamos a construir un pipeline que incluya:
+
+* **Experimentación:** Entrenar el modelo y guardar los resultados con herramientas de tracking
+* **Orquestación:** Automatizar la limpieza de datos y el entrenamiento
+* **Despliegue:** Poner el modelo a funcionar (posiblemente a través de una API local)
+* **Monitoreo:** Estar pendientes de que el modelo no pierda rendimiento cuando lleguen datos nuevos
+
+## Estructura del repositorio
 
 La estructura sigue una versión reducida de
 [Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/):
@@ -66,20 +83,20 @@ uv run jupyter lab
 
 ### Dónde está el CSV
 
-El archivo crudo pesa demasiado para versionarlo, así que vive fuera del repo.
-La ruta por defecto está en `src/trips/config.py`; para apuntar a tu propia copia
-define la variable de entorno `TRIPS_RAW_DATA` antes de ejecutar:
+Como el archivo crudo no se versiona, cada integrante trabaja con su propia copia.
+La ruta por defecto está en `src/trips/config.py`; para apuntar a la tuya, define
+la variable de entorno `TRIPS_RAW_DATA` antes de ejecutar:
 
 ```powershell
 $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 ```
 
-## Estado del proyecto
+## Lo que sigue
 
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
-- [x] Estructura del proyecto y paquete instalable en `src/`
+- [x] Estructura del repositorio y paquete instalable en `src/`
 - [x] Carga y validación de los datos crudos (`trips.data.load`)
 - [ ] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`)
 - [ ] EDA completo
 - [ ] Entrenamiento y tracking con MLflow
-
+- [ ] Despliegue y monitoreo
