@@ -69,6 +69,9 @@ Los notebooks explican y el paquete ejecuta: ninguno duplica la lógica del otro
 📘 **[Guía del proyecto](docs/guia-del-proyecto.md)** — qué hicimos, por qué cada
 decisión y qué encontramos en los datos. Es el documento para ponerse al día.
 
+🚀 **[Cómo empezar](docs/como-empezar.md)** — clonar, montar el entorno y trabajar en tu
+propia rama desde VS Code. Empieza por aquí si es tu primera vez en el proyecto.
+
 ## Puesta en marcha
 
 ```bash
