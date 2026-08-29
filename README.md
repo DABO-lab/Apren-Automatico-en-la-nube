@@ -100,6 +100,7 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [x] Estructura del repositorio y paquete instalable en `src/`
 - [x] Carga y validación de los datos crudos (`trips.data.load`)
 - [x] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`) — 108.487 viajes válidos (99,44%)
-- [ ] EDA completo — variables derivadas y relación con el objetivo
+- [x] EDA completo — variables derivadas y relación con el objetivo (`notebooks/02-eda.ipynb`)
+- [ ] Ingeniería de variables en el paquete (`trips.features`)
 - [ ] Entrenamiento y tracking con MLflow
 - [ ] Despliegue y monitoreo
