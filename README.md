@@ -54,11 +54,12 @@ datos crudos separados de datos procesados, el código como paquete instalable e
 
 ```
 data/raw/          datos como llegan (no se versionan)
-data/processed/    datos ya limpios (parquet)
+data/processed/    datos ya limpios (viajes_limpio.parquet)
 notebooks/         01-carga-y-eda.ipynb  -> explica
 src/trips/         el mismo trabajo, como paquete -> ejecuta
   config.py        única fuente de verdad: rutas, semilla, columnas
   data/load.py     lectura y validación del CSV crudo
+  data/clean.py    variable objetivo y reglas de limpieza
 Makefile           los comandos del proyecto
 ```
 
@@ -68,7 +69,7 @@ Los notebooks explican y el paquete ejecuta: ninguno duplica la lógica del otro
 
 ```bash
 make setup     # uv sync + hook de pre-commit
-make data      # lee el CSV crudo y muestra su ficha técnica
+make data      # lee el CSV crudo, lo describe y lo limpia: raw -> processed
 make notebook  # abre Jupyter Lab
 ```
 
@@ -78,6 +79,7 @@ Si no tienes `make` (Windows), los comandos equivalentes son:
 uv sync
 uv run pre-commit install
 uv run python -m trips.data.load
+uv run python -m trips.data.clean
 uv run jupyter lab
 ```
 
@@ -96,7 +98,7 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
 - [x] Estructura del repositorio y paquete instalable en `src/`
 - [x] Carga y validación de los datos crudos (`trips.data.load`)
-- [ ] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`)
+- [x] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`) — 108.487 viajes válidos (99,44%)
 - [ ] EDA completo
 - [ ] Entrenamiento y tracking con MLflow
 - [ ] Despliegue y monitoreo
