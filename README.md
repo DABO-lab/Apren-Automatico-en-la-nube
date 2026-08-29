@@ -55,7 +55,8 @@ datos crudos separados de datos procesados, el código como paquete instalable e
 ```
 data/raw/          datos como llegan (no se versionan)
 data/processed/    datos ya limpios (viajes_limpio.parquet)
-notebooks/         01-carga-y-eda.ipynb  -> explica
+notebooks/         01-carga-y-limpieza.ipynb  -> qué tienen de malo los datos
+                   02-eda.ipynb               -> qué explica la duración
 src/trips/         el mismo trabajo, como paquete -> ejecuta
   config.py        única fuente de verdad: rutas, semilla, columnas
   data/load.py     lectura y validación del CSV crudo
@@ -99,6 +100,6 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [x] Estructura del repositorio y paquete instalable en `src/`
 - [x] Carga y validación de los datos crudos (`trips.data.load`)
 - [x] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`) — 108.487 viajes válidos (99,44%)
-- [ ] EDA completo
+- [ ] EDA completo — variables derivadas y relación con el objetivo
 - [ ] Entrenamiento y tracking con MLflow
 - [ ] Despliegue y monitoreo
