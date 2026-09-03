@@ -110,3 +110,6 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [ ] Ingeniería de variables en el paquete (`trips.features`)
 - [ ] Entrenamiento y tracking con MLflow
 - [ ] Despliegue y monitoreo
+
+
+integracion de catherine ceballos
