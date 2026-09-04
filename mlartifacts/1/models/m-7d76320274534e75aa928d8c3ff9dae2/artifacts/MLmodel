@@ -1,0 +1,37 @@
+artifact_path: mlflow-artifacts:/1/models/m-7d76320274534e75aa928d8c3ff9dae2/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.11.15
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.0
+    skops_trusted_types: null
+is_signature_from_type_hint: false
+mlflow_version: 3.15.2
+model_id: m-7d76320274534e75aa928d8c3ff9dae2
+model_size_bytes: 1323745
+model_uuid: m-7d76320274534e75aa928d8c3ff9dae2
+prompts: null
+run_id: 1fd02bec4aa6455c9a8a08acf8566fd3
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "double", "name": "distancia_km", "required": true}, {"type":
+    "string", "name": "member_casual", "required": true}, {"type": "string", "name":
+    "rideable_type", "required": true}, {"type": "integer", "name": "hora", "required":
+    true}, {"type": "integer", "name": "dia_semana", "required": true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-09-04 01:45:14.078385'

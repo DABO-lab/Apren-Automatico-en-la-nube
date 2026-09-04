@@ -61,6 +61,8 @@ src/trips/         el mismo trabajo, como paquete -> ejecuta
   config.py        única fuente de verdad: rutas, semilla, columnas
   data/load.py     lectura y validación del CSV crudo
   data/clean.py    variable objetivo y reglas de limpieza
+  features.py      variables derivadas: hora, día, distancia
+  models/train.py  entrena 3 modelos, los compara y registra en MLflow
 Makefile           los comandos del proyecto
 ```
 
@@ -77,6 +79,8 @@ propia rama desde VS Code. Empieza por aquí si es tu primera vez en el proyecto
 ```bash
 make setup     # uv sync + hook de pre-commit
 make data      # lee el CSV crudo, lo describe y lo limpia: raw -> processed
+make mlflow    # levanta el servidor de MLflow en http://127.0.0.1:5001
+make train     # entrena, compara y registra los modelos (MLflow debe estar arriba)
 make notebook  # abre Jupyter Lab
 ```
 
@@ -87,6 +91,8 @@ uv sync
 uv run pre-commit install
 uv run python -m trips.data.load
 uv run python -m trips.data.clean
+uv run python -m mlflow server --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5001
+uv run python -m trips.models.train
 uv run jupyter lab
 ```
 
@@ -107,9 +113,7 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [x] Carga y validación de los datos crudos (`trips.data.load`)
 - [x] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`) — 108.487 viajes válidos (99,44%)
 - [x] EDA completo — variables derivadas y relación con el objetivo (`notebooks/02-eda.ipynb`)
-- [ ] Ingeniería de variables en el paquete (`trips.features`)
-- [ ] Entrenamiento y tracking con MLflow
+- [x] Ingeniería de variables en el paquete (`trips.features`)
+- [x] Entrenamiento y tracking con MLflow — 3 modelos comparados, mejor: árboles
+      (MAE 4,06 min · error mediano 1,33 min · R² 0,53 sobre el logaritmo)
 - [ ] Despliegue y monitoreo
-
-
-integracion de catherine ceballos
