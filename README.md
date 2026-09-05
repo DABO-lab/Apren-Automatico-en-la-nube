@@ -61,10 +61,12 @@ src/trips/         el mismo trabajo, como paquete -> ejecuta
   config.py        única fuente de verdad: rutas, semilla, columnas
   data/load.py     lectura y validación del CSV crudo
   data/clean.py    variable objetivo y reglas de limpieza
+  data/contract.py contratos de datos (Pandera): crudos y limpios
   features.py      variables derivadas: hora, día, distancia
   models/train.py  entrena 3 modelos, los compara y registra en MLflow
   api/             API que sirve el modelo champion (FastAPI)
 Dockerfile         imagen de la API, en dos etapas y sin root
+tests/             pruebas: contrato, limpieza, variables y API
 Makefile           los comandos del proyecto
 ```
 
@@ -86,6 +88,7 @@ make train     # entrena, compara y registra los modelos (MLflow debe estar arri
 make api       # levanta la API en http://127.0.0.1:8000/docs
 make docker-build   # construye la imagen de la API
 make docker-run     # corre la API en un contenedor
+make test      # corre la suite de pruebas
 make notebook  # abre Jupyter Lab
 ```
 
@@ -134,6 +137,26 @@ make docker-run
 Documentación interactiva en http://127.0.0.1:8000/docs. Endpoints: `/predict`,
 `/predict/batch`, `/health` y `/modelo`.
 
+## El contrato de los datos
+
+`src/trips/data/contract.py` declara qué forma deben tener los datos, en dos
+momentos: `ViajesCrudos` valida el CSV al cargarlo y `ViajesLimpios` valida el
+resultado antes de escribir el parquet. Si el contrato de salida falla, el
+parquet no se escribe.
+
+Valida en tres niveles: por fila (un valor imposible), por distribución (un
+archivo truncado o un mes que cambió de forma) y entre columnas (un viaje que
+termina antes de empezar). Los umbrales salen del EDA, no del aire.
+
+Las pruebas verifican las dos direcciones: que los datos buenos pasen —con un
+control negativo de tres lotes independientes— y que siete degradaciones reales
+fallen. Un contrato sin pruebas se desactiva solo el día que alguien relaja un
+rango.
+
+```bash
+make test
+```
+
 ## Lo que sigue
 
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
@@ -147,4 +170,5 @@ Documentación interactiva en http://127.0.0.1:8000/docs. Endpoints: `/predict`,
 - [x] Despliegue — API con FastAPI y contenedor Docker (imagen multi-etapa, sin root)
 - [ ] Monitoreo y reporte de drift
 - [ ] Orquestación del pipeline
-- [ ] Validación de datos y pruebas
+- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 28 pruebas
+      (incluye fixtures rotos a propósito y control negativo)

@@ -21,6 +21,7 @@ from trips.config import (
     TARGET_COLUMN,
     UMBRAL_FALSO_VIAJE_MIN,
 )
+from trips.data.contract import ViajesLimpios
 from trips.data.load import load_trips
 
 
@@ -86,6 +87,13 @@ def clean_trips(df: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     df = load_trips()
     df_limpio = clean_trips(df)
+
+    # El contrato de salida: la garantía de que las reglas de arriba hicieron
+    # lo que dicen. Si una falla, el parquet no se escribe — mejor no tener
+    # datos procesados que tenerlos mal y no saberlo.
+    ViajesLimpios.validate(df_limpio, lazy=True)
+    print("Contrato de salida: validado")
+
     PROCESSED_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
     df_limpio.to_parquet(PROCESSED_DATA_PATH, index=False)
     print(f"Guardado en {PROCESSED_DATA_PATH}")
