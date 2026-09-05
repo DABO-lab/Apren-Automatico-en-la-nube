@@ -1,4 +1,4 @@
-.PHONY: setup data features mlflow train api docker-build docker-run test lint notebook
+.PHONY: setup data features mlflow train api docker-build docker-run drift test lint notebook
 
 # Instala las dependencias exactas del uv.lock y activa el hook de pre-commit
 setup:
@@ -37,6 +37,11 @@ docker-build:
 # Corre la API en un contenedor (MLflow debe estar arriba en la maquina anfitriona)
 docker-run:
 	docker run --rm -p 8000:8000 --add-host=host.docker.internal:host-gateway trips-api
+
+# Chequeo de drift: compara los datos recientes con los de entrenamiento
+# Codigos de salida: 0 sin alerta, 1 drift detectado, 2 no evaluable
+drift:
+	uv run python -m trips.monitoring.check_drift
 
 # Corre la suite de pruebas (contrato de datos, limpieza, variables y API)
 test:

@@ -65,6 +65,7 @@ src/trips/         el mismo trabajo, como paquete -> ejecuta
   features.py      variables derivadas: hora, día, distancia
   models/train.py  entrena 3 modelos, los compara y registra en MLflow
   api/             API que sirve el modelo champion (FastAPI)
+  monitoring/      estadisticos de drift y chequeo con umbral calibrado
 Dockerfile         imagen de la API, en dos etapas y sin root
 tests/             pruebas: contrato, limpieza, variables y API
 Makefile           los comandos del proyecto
@@ -88,6 +89,7 @@ make train     # entrena, compara y registra los modelos (MLflow debe estar arri
 make api       # levanta la API en http://127.0.0.1:8000/docs
 make docker-build   # construye la imagen de la API
 make docker-run     # corre la API en un contenedor
+make drift     # compara los datos recientes con los de entrenamiento
 make test      # corre la suite de pruebas
 make notebook  # abre Jupyter Lab
 ```
@@ -157,6 +159,31 @@ rango.
 make test
 ```
 
+## Monitoreo de drift
+
+```bash
+make drift
+```
+
+Compara los datos recientes contra los de entrenamiento y decide si el modelo
+sigue viendo el mundo con el que aprendió. Devuelve **0** sin alerta, **1** con
+drift y **2** si no hay datos suficientes para concluir — "no evaluable" y "sin
+drift" no son lo mismo.
+
+**El umbral no es un número de internet.** `linea_base_nula()` parte la
+referencia en dos mitades aleatorias treinta veces y mide cuánto se mueve el
+estadístico cuando por construcción no hay drift. Con nuestros datos ese ruido
+es PSI = 0,0009, así que alertar en 0,10 es hacerlo a cien veces el ruido de
+fondo.
+
+**Por qué no usamos el p-valor.** Con 108.487 viajes, el p-valor alerta en las
+seis columnas vigiladas; el tamaño de efecto, en una sola (`dia_semana`, porque
+los últimos seis días de julio no cubren la semana completa). El informe incluye
+el campo `p_valor_diria_drift` justamente para dejar esa diferencia a la vista.
+
+Se alerta cuando **el 30% o más de las columnas** se mueven: una sola es ruido,
+un tercio es otro mes.
+
 ## Lo que sigue
 
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
@@ -168,7 +195,8 @@ make test
 - [x] Entrenamiento y tracking con MLflow — 3 modelos comparados, mejor: árboles
       (MAE 4,06 min · error mediano 1,33 min · R² 0,53 sobre el logaritmo)
 - [x] Despliegue — API con FastAPI y contenedor Docker (imagen multi-etapa, sin root)
-- [ ] Monitoreo y reporte de drift
+- [x] Monitoreo — chequeo de drift con umbral calibrado contra una línea base nula
+      (reporte JSON + HTML de Evidently + métricas en MLflow)
 - [ ] Orquestación del pipeline
-- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 28 pruebas
+- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 38 pruebas
       (incluye fixtures rotos a propósito y control negativo)
