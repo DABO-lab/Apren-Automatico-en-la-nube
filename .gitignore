@@ -34,8 +34,9 @@ data/processed/*
 # Jupyter
 .ipynb_checkpoints/
 
-# MLflow
+# MLflow (artefactos y base de datos: se regeneran con 'make train')
 mlruns/
+mlartifacts/
 mlflow.db
 
 # Analisis desechables (no se versionan)

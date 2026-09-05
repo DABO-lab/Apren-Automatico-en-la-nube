@@ -1,0 +1,29 @@
+# Todo lo que no tiene por qué viajar dentro de la imagen.
+# Cada archivo de más es tiempo de construcción y superficie de ataque.
+
+.venv/
+__pycache__/
+*.pyc
+
+# Datos y resultados: se generan, no se empaquetan
+data/
+mlartifacts/
+mlruns/
+mlflow.db
+scratch/
+
+# Trabajo de exploración y documentación
+notebooks/
+docs/
+*.ipynb
+
+# Control de versiones y herramientas de desarrollo
+.git/
+.gitignore
+.github/
+.pre-commit-config.yaml
+.ruff_cache/
+.ipynb_checkpoints/
+Makefile
+
+# README.md NO se ignora: pyproject.toml lo declara y hatchling lo necesita

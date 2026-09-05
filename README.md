@@ -61,6 +61,10 @@ src/trips/         el mismo trabajo, como paquete -> ejecuta
   config.py        única fuente de verdad: rutas, semilla, columnas
   data/load.py     lectura y validación del CSV crudo
   data/clean.py    variable objetivo y reglas de limpieza
+  features.py      variables derivadas: hora, día, distancia
+  models/train.py  entrena 3 modelos, los compara y registra en MLflow
+  api/             API que sirve el modelo champion (FastAPI)
+Dockerfile         imagen de la API, en dos etapas y sin root
 Makefile           los comandos del proyecto
 ```
 
@@ -77,6 +81,11 @@ propia rama desde VS Code. Empieza por aquí si es tu primera vez en el proyecto
 ```bash
 make setup     # uv sync + hook de pre-commit
 make data      # lee el CSV crudo, lo describe y lo limpia: raw -> processed
+make mlflow    # levanta el servidor de MLflow en http://127.0.0.1:5001
+make train     # entrena, compara y registra los modelos (MLflow debe estar arriba)
+make api       # levanta la API en http://127.0.0.1:8000/docs
+make docker-build   # construye la imagen de la API
+make docker-run     # corre la API en un contenedor
 make notebook  # abre Jupyter Lab
 ```
 
@@ -87,6 +96,8 @@ uv sync
 uv run pre-commit install
 uv run python -m trips.data.load
 uv run python -m trips.data.clean
+uv run python -m mlflow server --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5001
+uv run python -m trips.models.train
 uv run jupyter lab
 ```
 
@@ -100,6 +111,29 @@ la variable de entorno `TRIPS_RAW_DATA` antes de ejecutar:
 $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 ```
 
+## Servir el modelo
+
+La API carga el modelo del registry **por alias**, no desde un archivo:
+`models:/duracion-regressor@champion`. Para cambiar el modelo en producción no
+se reconstruye nada — se mueve el alias en MLflow y se reinicia el proceso.
+
+Necesita MLflow arriba. Con `--host 0.0.0.0` para que el contenedor lo alcance:
+
+```bash
+make mlflow    # terminal 1
+make api       # terminal 2 (sin contenedor)
+```
+
+En contenedor:
+
+```bash
+make docker-build
+make docker-run
+```
+
+Documentación interactiva en http://127.0.0.1:8000/docs. Endpoints: `/predict`,
+`/predict/batch`, `/health` y `/modelo`.
+
 ## Lo que sigue
 
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
@@ -107,9 +141,10 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [x] Carga y validación de los datos crudos (`trips.data.load`)
 - [x] Limpieza y variable objetivo `duracion_min` (`trips.data.clean`) — 108.487 viajes válidos (99,44%)
 - [x] EDA completo — variables derivadas y relación con el objetivo (`notebooks/02-eda.ipynb`)
-- [ ] Ingeniería de variables en el paquete (`trips.features`)
-- [ ] Entrenamiento y tracking con MLflow
-- [ ] Despliegue y monitoreo
-
-
-integracion de catherine ceballos
+- [x] Ingeniería de variables en el paquete (`trips.features`)
+- [x] Entrenamiento y tracking con MLflow — 3 modelos comparados, mejor: árboles
+      (MAE 4,06 min · error mediano 1,33 min · R² 0,53 sobre el logaritmo)
+- [x] Despliegue — API con FastAPI y contenedor Docker (imagen multi-etapa, sin root)
+- [ ] Monitoreo y reporte de drift
+- [ ] Orquestación del pipeline
+- [ ] Validación de datos y pruebas

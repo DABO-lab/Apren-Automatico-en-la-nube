@@ -6,10 +6,14 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "matplotlib>=3.11.1",
-    "pandas>=3.0.5",
+    # MLflow 3 exige pandas<3; el repo del profesor usa pandas 2.3.3
+    "pandas>=2.2,<3",
     "scikit-learn>=1.9.0",
     "seaborn>=0.13.2",
     "pyarrow>=18.0.0",
+    "mlflow>=3.1",
+    "fastapi>=0.141.1",
+    "uvicorn[standard]>=0.52.4",
 ]
 
 [dependency-groups]
