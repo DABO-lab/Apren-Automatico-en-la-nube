@@ -12,12 +12,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # --- Rutas de datos -------------------------------------------------------
-# El CSV crudo de Citi Bike (julio de 2026, Jersey City y Hoboken) vive fuera
-# del repo porque pesa demasiado para versionarlo. Cada integrante puede
-# apuntar a su propia copia con la variable de entorno TRIPS_RAW_DATA;
-# si no la define, se usa la ruta por defecto.
-DEFAULT_RAW_DATA = r"C:\Users\andre\Documents\JC-202607-citibike-tripdata.csv"
-RAW_DATA_PATH = Path(os.getenv("TRIPS_RAW_DATA", DEFAULT_RAW_DATA))
+# El CSV crudo de Citi Bike (julio de 2026, Jersey City y Hoboken) no se
+# versiona: pesa demasiado. Por convención va en data/raw/, que es la ruta
+# que funciona igual en cualquier máquina. Quien lo tenga en otro sitio usa
+# la variable de entorno TRIPS_RAW_DATA.
+# Nada de rutas absolutas aquí: un "C:\Users\..." rompe el proyecto para
+# todos los demás y es una penalización explícita de la rúbrica.
+RAW_FILENAME = "JC-202607-citibike-tripdata.csv"
+RAW_DATA_PATH = Path(
+    os.getenv("TRIPS_RAW_DATA", PROJECT_ROOT / "data" / "raw" / RAW_FILENAME)
+)
 
 # Los datos ya limpios sí quedan dentro del proyecto (formato parquet:
 # conserva los tipos y ocupa mucho menos que un CSV).
@@ -71,7 +75,11 @@ END_COLUMNS = ["end_station_id", "end_station_name", "end_lat", "end_lng"]
 # Puerto 5001 y no 5000: en macOS AirPlay ocupa el 5000 y responde un 403 que
 # parece un error de MLflow (y no lo es). Usamos el mismo del curso.
 MLFLOW_PORT = 5001
-MLFLOW_TRACKING_URI = f"http://127.0.0.1:{MLFLOW_PORT}"
+# Dentro de un contenedor, 127.0.0.1 es el contenedor mismo: hay que apuntar
+# al host con MLFLOW_TRACKING_URI (ver Dockerfile y docs/despliegue).
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI", f"http://127.0.0.1:{MLFLOW_PORT}"
+)
 EXPERIMENT_NAME = "duracion-viajes"
 REGISTERED_MODEL_NAME = "duracion-regressor"
 

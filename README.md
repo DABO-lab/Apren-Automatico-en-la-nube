@@ -63,6 +63,8 @@ src/trips/         el mismo trabajo, como paquete -> ejecuta
   data/clean.py    variable objetivo y reglas de limpieza
   features.py      variables derivadas: hora, día, distancia
   models/train.py  entrena 3 modelos, los compara y registra en MLflow
+  api/             API que sirve el modelo champion (FastAPI)
+Dockerfile         imagen de la API, en dos etapas y sin root
 Makefile           los comandos del proyecto
 ```
 
@@ -81,6 +83,9 @@ make setup     # uv sync + hook de pre-commit
 make data      # lee el CSV crudo, lo describe y lo limpia: raw -> processed
 make mlflow    # levanta el servidor de MLflow en http://127.0.0.1:5001
 make train     # entrena, compara y registra los modelos (MLflow debe estar arriba)
+make api       # levanta la API en http://127.0.0.1:8000/docs
+make docker-build   # construye la imagen de la API
+make docker-run     # corre la API en un contenedor
 make notebook  # abre Jupyter Lab
 ```
 
@@ -106,6 +111,29 @@ la variable de entorno `TRIPS_RAW_DATA` antes de ejecutar:
 $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 ```
 
+## Servir el modelo
+
+La API carga el modelo del registry **por alias**, no desde un archivo:
+`models:/duracion-regressor@champion`. Para cambiar el modelo en producción no
+se reconstruye nada — se mueve el alias en MLflow y se reinicia el proceso.
+
+Necesita MLflow arriba. Con `--host 0.0.0.0` para que el contenedor lo alcance:
+
+```bash
+make mlflow    # terminal 1
+make api       # terminal 2 (sin contenedor)
+```
+
+En contenedor:
+
+```bash
+make docker-build
+make docker-run
+```
+
+Documentación interactiva en http://127.0.0.1:8000/docs. Endpoints: `/predict`,
+`/predict/batch`, `/health` y `/modelo`.
+
 ## Lo que sigue
 
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
@@ -116,4 +144,7 @@ $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 - [x] Ingeniería de variables en el paquete (`trips.features`)
 - [x] Entrenamiento y tracking con MLflow — 3 modelos comparados, mejor: árboles
       (MAE 4,06 min · error mediano 1,33 min · R² 0,53 sobre el logaritmo)
-- [ ] Despliegue y monitoreo
+- [x] Despliegue — API con FastAPI y contenedor Docker (imagen multi-etapa, sin root)
+- [ ] Monitoreo y reporte de drift
+- [ ] Orquestación del pipeline
+- [ ] Validación de datos y pruebas
