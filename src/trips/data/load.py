@@ -18,6 +18,7 @@ Uso desde un notebook:
 import pandas as pd
 
 from trips.config import DATE_COLUMNS, EXPECTED_COLUMNS, RAW_DATA_PATH
+from trips.data.contract import ViajesCrudos
 
 # Tipos declarados de entrada: pedirle a pandas que lea los identificadores
 # como texto evita que convierta "3186" en un número y pierda ceros a la
@@ -55,11 +56,13 @@ def validate_schema(df: pd.DataFrame) -> None:
         print(f"Aviso - columnas nuevas no contempladas en config.py: {sobrantes}")
 
 
-def load_trips(path=None) -> pd.DataFrame:
+def load_trips(path=None, validar: bool = True) -> pd.DataFrame:
     """Lee el CSV crudo de viajes y devuelve el DataFrame ya tipado.
 
     Args:
         path: ruta alternativa al CSV. Por defecto, la de config.RAW_DATA_PATH.
+        validar: aplica el contrato `ViajesCrudos`. Se puede desactivar para
+            inspeccionar un archivo que justamente sospechamos que está mal.
     """
     ruta = path or RAW_DATA_PATH
 
@@ -72,6 +75,12 @@ def load_trips(path=None) -> pd.DataFrame:
 
     df = pd.read_csv(ruta, dtype=DTYPES, parse_dates=DATE_COLUMNS)
     validate_schema(df)
+
+    if validar:
+        # lazy=True junta TODOS los incumplimientos en un solo informe, en vez
+        # de detenerse en el primero. Diagnosticar diez problemas de una vez es
+        # mucho más rápido que descubrirlos uno por corrida.
+        ViajesCrudos.validate(df, lazy=True)
     return df
 
 

@@ -41,3 +41,6 @@ mlflow.db
 
 # Analisis desechables (no se versionan)
 scratch/
+
+# Reportes de drift: se regeneran con 'make drift'
+reports/
