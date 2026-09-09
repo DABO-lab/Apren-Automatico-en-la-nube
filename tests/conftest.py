@@ -1,43 +1,24 @@
-"""Fixtures generados en código, no archivos CSV.
+"""Fixtures basados en el generador de `trips.data.synthetic`.
 
-Un CSV de prueba se desactualiza y nadie se entera; un generador con semilla
-fija produce siempre los mismos datos y se lee como documentación de qué
-esperamos. Cada fixture roto reproduce una degradación real, no un caso
-imposible.
+El generador vive en el paquete (no aquí) para que el job de CI que corre el
+pipeline completo en `main` use exactamente los mismos datos sintéticos que
+estas pruebas, en vez de mantener dos generadores que tarde o temprano se
+desincronizan (ver `src/trips/data/synthetic.py`).
+
+Cada fixture roto reproduce una degradación real, no un caso imposible.
 """
 
-import numpy as np
 import pandas as pd
 import pytest
+
+from trips.data.synthetic import generar_viajes_sinteticos
 
 SEMILLA = 42
 N = 2_000
 
 
 def _viajes_validos(n: int = N, semilla: int = SEMILLA) -> pd.DataFrame:
-    """Un lote que se parece a julio: cola larga, mediana cerca de 6 minutos."""
-    rng = np.random.default_rng(semilla)
-    inicio = pd.Timestamp("2026-07-01") + pd.to_timedelta(
-        rng.integers(0, 31 * 24 * 60, n), unit="m"
-    )
-    duracion = np.clip(rng.lognormal(1.85, 0.75, n), 1.0, 1439)
-    return pd.DataFrame(
-        {
-            "ride_id": [f"R{i:07d}" for i in range(n)],
-            "rideable_type": rng.choice(["classic_bike", "electric_bike"], n),
-            "started_at": inicio,
-            "ended_at": inicio + pd.to_timedelta(duracion, unit="m"),
-            "start_station_name": rng.choice(["Grove St PATH", "Hamilton Park"], n),
-            "start_station_id": rng.choice(["JC001", "JC002"], n),
-            "end_station_name": rng.choice(["Newark Ave", "River St"], n),
-            "end_station_id": rng.choice(["JC003", "JC004"], n),
-            "start_lat": 40.72 + rng.normal(0, 0.01, n),
-            "start_lng": -74.04 + rng.normal(0, 0.01, n),
-            "end_lat": 40.73 + rng.normal(0, 0.01, n),
-            "end_lng": -74.03 + rng.normal(0, 0.01, n),
-            "member_casual": rng.choice(["member", "casual"], n, p=[0.72, 0.28]),
-        }
-    )
+    return generar_viajes_sinteticos(n=n, semilla=semilla)
 
 
 @pytest.fixture
