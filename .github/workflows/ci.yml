@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-y-test:
+    name: Lint y pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar uv y Python 3.11
+        uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias (uv sync --locked)
+        # --locked falla si uv.lock quedó desactualizado respecto a
+        # pyproject.toml, en vez de regenerarlo en silencio: es la misma
+        # garantía de reproducibilidad que "uv sync" da en local, pero
+        # convertida en gate de CI.
+        run: uv sync --locked
+
+      - name: Lint (mismos hooks que corren en el commit local)
+        # Se usa "pre-commit run" en vez de "make lint": el target del
+        # Makefile llama a "ruff format ." (sin --check), que autoformatea y
+        # siempre sale en 0 -no bloquea nada, aunque el código esté mal
+        # formateado-. pre-commit sí falla si un hook modifica archivos,
+        # así que este paso es el que realmente actúa como compuerta.
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Pruebas (make test)
+        run: make test
+
+  pipeline-y-promocion:
+    name: Pipeline y compuerta de promoción (main)
+    needs: lint-y-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      # Backend local (SQLite) en vez de un servidor MLflow: el runner de
+      # Actions es efímero y no tiene sentido levantar un servicio aparte
+      # solo para esta corrida. mlflow.set_tracking_uri acepta este URI
+      # directamente, sin necesidad de "mlflow server" (ver config.py).
+      MLFLOW_TRACKING_URI: sqlite:///mlflow_ci.db
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar uv y Python 3.11
+        uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias (uv sync --locked)
+        run: uv sync --locked
+
+      - name: Generar datos sintéticos para esta corrida
+        # El CSV real de julio no está en el repositorio (no se versiona).
+        # Este genera uno con la forma correcta -misma semilla que los
+        # fixtures de tests/conftest.py- solo para que el pipeline tenga
+        # algo que procesar en CI. No es el dataset de producción.
+        run: |
+          uv run python scripts/generar_datos_ci.py \
+            --salida data/raw/JC-202607-citibike-tripdata.csv \
+            --filas 5000
+
+      - name: Correr el pipeline orquestado (Prefect + MLflow local)
+        # Sin PREFECT_API_URL, Prefect 3 usa su servidor efímero local: en
+        # Windows eso falla con httpx.ConnectTimeout (sección 10 del
+        # informe), pero en el runner de Actions (Linux, sin la carrera
+        # contra el arranque del socket) no hace falta el servidor fijo.
+        run: uv run python -m trips.flows.training
+
+      - name: Compuerta de promoción
+        # scripts/promote.py devuelve códigos de salida con significado
+        # (ver su docstring): 0 = promovido, 1 = decisión válida de NO
+        # promover (por ejemplo, un empate exacto -ya nos pasó, sección 6.7
+        # del informe-), 2 = error real. Tratar 1 como éxito no es lo mismo
+        # que "|| true": "|| true" ignora CUALQUIER código, incluido el 2.
+        # Aquí el único código que rompe el build es el que de verdad
+        # significa que algo falló.
+        run: |
+          set +e
+          uv run python scripts/promote.py
+          codigo=$?
+          set -e
+          echo "Código de salida de la compuerta: $codigo"
+          if [ "$codigo" -eq 0 ] || [ "$codigo" -eq 1 ]; then
+            exit 0
+          fi
+          echo "::error::La compuerta de promoción falló con un error real (código $codigo)."
+          exit 1
