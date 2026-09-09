@@ -27,17 +27,19 @@ import mlflow
 import pandas as pd
 
 from trips.config import (
+    CRAMER_MINIMO,
     EXPERIMENT_NAME,
+    FRACCION_COLUMNAS_PARA_ALERTAR,
+    MINIMO_FILAS_DRIFT,
     MLFLOW_TRACKING_URI,
     PROCESSED_DATA_PATH,
     PROJECT_ROOT,
+    PSI_MODERADO,
     TARGET_COLUMN,
     TEST_SIZE,
 )
 from trips.features import add_features
 from trips.monitoring.estadistico import (
-    CRAMER_MINIMO,
-    PSI_MODERADO,
     cramers_v,
     jensen_shannon,
     ks,
@@ -48,14 +50,6 @@ from trips.monitoring.estadistico import (
 # Columnas a vigilar: las que el modelo usa, más el objetivo.
 COLUMNAS_NUMERICAS = ["distancia_km", TARGET_COLUMN]
 COLUMNAS_CATEGORICAS = ["member_casual", "rideable_type", "hora", "dia_semana"]
-
-# Umbral a nivel del conjunto: una columna movida es ruido; un tercio de las
-# columnas movidas es otro mes.
-FRACCION_COLUMNAS_PARA_ALERTAR = 0.30
-
-# Por debajo de esto no se concluye nada: "no evaluable" y "sin drift" son
-# cosas distintas, y confundirlas es cómo se pierde la confianza en el sistema.
-MINIMO_FILAS = 1_000
 
 SALIDA = PROJECT_ROOT / "reports"
 
@@ -208,10 +202,10 @@ def main() -> int:
             add_features(pd.read_parquet(PROCESSED_DATA_PATH))
         )
 
-    if len(referencia) < MINIMO_FILAS or len(actual) < MINIMO_FILAS:
+    if len(referencia) < MINIMO_FILAS_DRIFT or len(actual) < MINIMO_FILAS_DRIFT:
         print(
             f"No evaluable: {len(referencia)} y {len(actual)} filas "
-            f"(se necesitan al menos {MINIMO_FILAS} en cada lado)."
+            f"(se necesitan al menos {MINIMO_FILAS_DRIFT} en cada lado)."
         )
         return 2
 

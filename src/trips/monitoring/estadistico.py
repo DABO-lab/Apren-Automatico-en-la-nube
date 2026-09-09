@@ -13,12 +13,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-# PSI: umbrales de la industria (crédito y riesgo), donde nació la medida.
-PSI_MODERADO = 0.10
-PSI_ALTO = 0.25
-
-# V de Cramér: 0,1 es el piso de "efecto pequeño" en la convención de Cohen.
-CRAMER_MINIMO = 0.10
+# Los umbrales (PSI_MODERADO, CRAMER_MINIMO, etc.) viven en trips.config: es
+# la única fuente de verdad del proyecto, y quien los use los importa de ahí.
 
 
 def psi(referencia: np.ndarray, actual: np.ndarray, bins: int = 10) -> float:

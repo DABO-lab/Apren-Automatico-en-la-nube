@@ -43,5 +43,9 @@ mlflow.db
 # Analisis desechables (no se versionan)
 scratch/
 
-# Reportes de drift: se regeneran con 'make drift'
-reports/
+# Reportes de drift: la evidencia real (drift.json y drift.html) SI se
+# versiona -- es la prueba de monitoreo que pide la rubrica. Lo demas que
+# 'make drift' regenere en esta carpeta, no.
+reports/*
+!reports/drift.json
+!reports/drift.html
