@@ -8,3 +8,19 @@ repos:
         # Los notebooks los formatea VS Code; que ruff no se los pelee
         # (el tira y afloja por el salto de línea final los marca como modificados)
         exclude: \.ipynb$
+
+  # Bloquea el commit si detecta un secreto (llave de API, token, credencial)
+  # ANTES de que llegue al historial: una vez ahi, borrarlo no alcanza, hay
+  # que rotar la credencial (ver docs/riesgos.md, riesgo 5).
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # Limpia las salidas de los notebooks antes de commitear: los outputs
+  # (imagenes en base64, rutas del entorno de quien corrio la celda) hacen
+  # los diffs ilegibles y filtran informacion del entorno del autor.
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout

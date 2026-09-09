@@ -100,6 +100,7 @@ Documentación exigida por la rúbrica del curso (evidencia por dimensión):
 
 ```bash
 make setup     # uv sync + hook de pre-commit
+make smoke     # diagnostica el entorno (uv, paquetes, puertos, hooks) -- corre esto primero
 make data      # lee el CSV crudo, lo describe y lo limpia: raw -> processed
 make mlflow    # levanta el servidor de MLflow en http://127.0.0.1:5001
 make train     # entrena, compara y registra los modelos (MLflow debe estar arriba)
