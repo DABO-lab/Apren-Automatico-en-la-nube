@@ -1,0 +1,79 @@
+{
+  "fecha": "2026-09-09T04:10:04+00:00",
+  "n_referencia": 86789,
+  "n_actual": 21698,
+  "columnas": {
+    "distancia_km": {
+      "tipo": "numerica",
+      "psi": 0.00075,
+      "umbral_psi": 0.1,
+      "psi_ruido_p99": 0.00092,
+      "ks": 0.01107,
+      "ks_p_valor": 0.02821,
+      "jensen_shannon": 0.00012,
+      "mediana_referencia": 1.11,
+      "mediana_actual": 1.08,
+      "drift": false,
+      "p_valor_diria_drift": true
+    },
+    "duracion_min": {
+      "tipo": "numerica",
+      "psi": 0.00073,
+      "umbral_psi": 0.1,
+      "psi_ruido_p99": 0.00086,
+      "ks": 0.01217,
+      "ks_p_valor": 0.01161,
+      "jensen_shannon": 0.00021,
+      "mediana_referencia": 6.46,
+      "mediana_actual": 6.36,
+      "drift": false,
+      "p_valor_diria_drift": true
+    },
+    "member_casual": {
+      "tipo": "categorica",
+      "cramers_v": 0.02271,
+      "umbral_cramers_v": 0.1,
+      "chi2_p_valor": 7.447e-14,
+      "drift": false,
+      "p_valor_diria_drift": true
+    },
+    "rideable_type": {
+      "tipo": "categorica",
+      "cramers_v": 0.01425,
+      "umbral_cramers_v": 0.1,
+      "chi2_p_valor": 2.685e-06,
+      "drift": false,
+      "p_valor_diria_drift": true
+    },
+    "hora": {
+      "tipo": "categorica",
+      "cramers_v": 0.03275,
+      "umbral_cramers_v": 0.1,
+      "chi2_p_valor": 1.878e-14,
+      "drift": false,
+      "p_valor_diria_drift": true
+    },
+    "dia_semana": {
+      "tipo": "categorica",
+      "cramers_v": 0.18556,
+      "umbral_cramers_v": 0.1,
+      "chi2_p_valor": 0.0,
+      "drift": true,
+      "p_valor_diria_drift": true
+    }
+  },
+  "columnas_con_drift": [
+    "dia_semana"
+  ],
+  "fraccion_columnas_con_drift": 0.167,
+  "umbral_fraccion": 0.3,
+  "alerta": false,
+  "columnas_que_alertaria_el_p_valor": [
+    "distancia_km",
+    "duracion_min",
+    "member_casual",
+    "rideable_type",
+    "hora",
+    "dia_semana"
+  ]
+}
