@@ -23,8 +23,8 @@ from trips.config import (
     ALIAS_CAMPEON,
     EXPERIMENT_NAME,
     MARGEN_DE_MEJORA,
-    MLFLOW_TRACKING_URI,
     METRICA_DE_PROMOCION,
+    MLFLOW_TRACKING_URI,
     PROJECT_ROOT,
     RANDOM_SEED,
     REGISTERED_MODEL_NAME,
@@ -91,11 +91,15 @@ def main() -> int:
             if familia is None or familia in vistas:
                 continue
             vistas.add(familia)
-            etiqueta = "champion" if run.info.run_id == run_champion.info.run_id else familia
+            etiqueta = (
+                "champion" if run.info.run_id == run_champion.info.run_id else familia
+            )
             filas_tabla.append(_fila_de_metricas(etiqueta, run))
 
-    tabla = "\n".join(filas_tabla) if filas_tabla else _fila_de_metricas(
-        "champion", run_champion
+    tabla = (
+        "\n".join(filas_tabla)
+        if filas_tabla
+        else _fila_de_metricas("champion", run_champion)
     )
 
     contenido = f"""# Model card — duración de viajes de Citi Bike

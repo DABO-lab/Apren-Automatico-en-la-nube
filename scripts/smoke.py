@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Smoke test del entorno del proyecto.
 
 Corre esto como PRIMER paso, antes de cualquier otra cosa:
@@ -77,7 +76,9 @@ def aviso(titulo: str, detalle: str) -> None:
 # =============================================================================
 def verificar_python() -> None:
     v = sys.version_info
-    detalle = f"{v.major}.{v.minor}.{v.micro} ({platform.system()} {platform.machine()})"
+    detalle = (
+        f"{v.major}.{v.minor}.{v.micro} ({platform.system()} {platform.machine()})"
+    )
     if (v.major, v.minor) >= (3, 11):
         ok("Python >= 3.11", detalle)
     else:
@@ -97,7 +98,7 @@ def verificar_herramientas() -> None:
             "uv instalado",
             "es el gestor de entorno del proyecto y 'make setup' no arranca sin el.\n"
             "         macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh\n"
-            '         Windows:     winget install astral-sh.uv\n'
+            "         Windows:     winget install astral-sh.uv\n"
             "         Cierra y reabre la terminal despues de instalarlo.",
         )
     else:
