@@ -1,18 +1,19 @@
-"""Entrena tres modelos, los registra en MLflow y marca el mejor como 'champion'.
-
-Tres decisiones de este script salen del EDA (docs/guia-del-proyecto.md):
-
-1. Se predice el LOGARITMO de la duración, no la duración. La distribución
-   tiene asimetría 31,6: sin transformar, un viaje de 1.300 minutos pesa más
-   en el entrenamiento que cientos de viajes normales.
-2. La partición 80/20 es TEMPORAL: se ordena por fecha y el 20% más reciente
-   queda para prueba. Un modelo que va a predecir viajes futuros no puede
-   entrenarse con datos posteriores a los que evalúa.
-3. `velocidad_kmh` no aparece por ninguna parte: se calcula dividiendo la
-   distancia entre la duración, así que contiene la respuesta (fuga de
-   información, sección 6.7 de la guía).
+"""Entrena, compara y registra modelos en MLflow.
 
     uv run python -m trips.models.train
+
+Tres decisiones salen del EDA (docs/guia-del-proyecto.md):
+
+1. Se predice el LOGARITMO de la duración. Con asimetría 31,6, sin transformar,
+   un viaje de 1.300 minutos pesa más que cientos de viajes normales.
+2. La partición 80/20 es TEMPORAL: lo viejo entrena, lo reciente evalúa. Un
+   modelo que va a predecir el futuro no puede entrenarse con datos posteriores
+   a los que evalúa.
+3. `velocidad_kmh` no aparece: contiene la respuesta (fuga de información).
+
+Y una decisión de operación: el mejor modelo de la corrida queda marcado como
+**`candidate`**, no como `champion`. La promoción a producción tiene su propia
+compuerta en `scripts/promote.py`.
 """
 
 import mlflow
@@ -29,6 +30,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 from trips.config import (
+    ALIAS_CANDIDATO,
     CATEGORICAL_FEATURES,
     EXPERIMENT_NAME,
     FEATURE_COLUMNS,
@@ -42,26 +44,28 @@ from trips.config import (
 )
 from trips.features import add_features
 
-# Las 3 configuraciones a comparar. La primera no aprende nada: siempre
-# predice la mediana. Es la vara de medir — cualquier modelo que no le gane
-# no está aportando información, solo consumiendo electricidad.
+# Las configuraciones a comparar. La primera no aprende nada: siempre predice
+# la mediana. Es la vara de medir — cualquier modelo que no le gane no está
+# aportando información, solo consumiendo electricidad.
 CONFIGS = [
-    {
-        "model_family": "baseline_mediana",
-        "params": {"strategy": "median"},
-        "build": lambda p: DummyRegressor(**p),
-    },
-    {
-        "model_family": "ridge",
-        "params": {"alpha": 1.0},
-        "build": lambda p: Ridge(**p, random_state=RANDOM_SEED),
-    },
+    {"model_family": "baseline_mediana", "params": {"strategy": "median"}},
+    {"model_family": "ridge", "params": {"alpha": 1.0}},
     {
         "model_family": "hist_gradient_boosting",
-        "params": {"max_iter": 300, "learning_rate": 0.1, "max_depth": None},
-        "build": lambda p: HistGradientBoostingRegressor(**p, random_state=RANDOM_SEED),
+        "params": {"max_iter": 300, "learning_rate": 0.1},
     },
 ]
+
+
+def construir_modelo(familia: str, params: dict):
+    """Del nombre de la familia al estimador, con la semilla fija puesta."""
+    if familia == "baseline_mediana":
+        return DummyRegressor(**params)
+    if familia == "ridge":
+        return Ridge(**params, random_state=RANDOM_SEED)
+    if familia == "hist_gradient_boosting":
+        return HistGradientBoostingRegressor(**params, random_state=RANDOM_SEED)
+    raise ValueError(f"Familia de modelo desconocida: {familia}")
 
 
 def split_temporal(df: pd.DataFrame, test_size: float = TEST_SIZE):
@@ -74,8 +78,8 @@ def split_temporal(df: pd.DataFrame, test_size: float = TEST_SIZE):
 def construir_preprocesador() -> ColumnTransformer:
     """El preprocesamiento viaja DENTRO del modelo.
 
-    Quien cargue el modelo del registry le pasa los datos tal cual, sin
-    preprocesar nada aparte: el pipeline completo es el que se guarda.
+    Quien cargue el modelo del registry le pasa los datos tal cual: el pipeline
+    completo es lo que se guarda.
     """
     return ColumnTransformer(
         transformers=[
@@ -93,8 +97,7 @@ def evaluar(y_test_min, pred_log) -> dict:
     """Métricas en MINUTOS, no en logaritmos.
 
     El modelo aprende sobre el logaritmo, pero nadie entiende "0,42 de error
-    logarítmico". Se deshace la transformación con expm1 y se reporta en la
-    unidad en que la gente piensa.
+    logarítmico": se deshace la transformación antes de reportar.
     """
     pred_min = np.expm1(pred_log)
     return {
@@ -105,95 +108,107 @@ def evaluar(y_test_min, pred_log) -> dict:
     }
 
 
-def main() -> None:
-    # 1. Conectarse al servidor de MLflow y elegir el experimento.
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment(EXPERIMENT_NAME)
-    client = MlflowClient()
-
-    # 2. Datos limpios + variables derivadas (las mismas del EDA, del paquete).
+def cargar_datos_de_entrenamiento():
+    """Parquet limpio + variables derivadas, partido en el tiempo."""
     if not PROCESSED_DATA_PATH.exists():
         raise FileNotFoundError(
             f"No encuentro {PROCESSED_DATA_PATH}. Corre antes 'make data'."
         )
-    df = add_features(pd.read_parquet(PROCESSED_DATA_PATH))
+    return split_temporal(add_features(pd.read_parquet(PROCESSED_DATA_PATH)))
 
-    train, test = split_temporal(df)
+
+def entrenar_configuracion(
+    familia: str, params: dict, tags: dict | None = None
+) -> dict:
+    """Entrena UNA configuración, la registra y devuelve sus métricas.
+
+    Está separada de `main()` para que el flujo de Prefect pueda llamarla una
+    vez por configuración, en paralelo y con caché propia.
+    """
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(EXPERIMENT_NAME)
+
+    train, test = cargar_datos_de_entrenamiento()
     X_train, X_test = train[FEATURE_COLUMNS], test[FEATURE_COLUMNS]
     y_train_log = np.log1p(train[TARGET_COLUMN])
     y_test_min = test[TARGET_COLUMN].to_numpy()
-
     corte = test["started_at"].min()
-    print(f"Entrenamiento: {len(train):,} viajes hasta {corte:%Y-%m-%d %H:%M}")
+
+    with mlflow.start_run(run_name=familia) as run:
+        pipeline = Pipeline(
+            [
+                ("preprocesamiento", construir_preprocesador()),
+                ("modelo", construir_modelo(familia, params)),
+            ]
+        )
+        pipeline.fit(X_train, y_train_log)
+        metricas = evaluar(y_test_min, pipeline.predict(X_test))
+
+        mlflow.log_params(params)
+        mlflow.log_metrics(metricas)
+        mlflow.set_tag("model_family", familia)
+        mlflow.set_tag("split", "temporal_80_20")
+        mlflow.set_tag("target", "log1p(duracion_min)")
+        for clave, valor in (tags or {}).items():
+            mlflow.set_tag(clave, valor)
+        mlflow.log_param("corte_temporal", f"{corte:%Y-%m-%d %H:%M}")
+        mlflow.log_param("n_train", len(train))
+        mlflow.log_param("n_test", len(test))
+
+        # signature = el contrato de entrada/salida del modelo.
+        mlflow.sklearn.log_model(
+            pipeline,
+            name="model",
+            signature=infer_signature(X_train, pipeline.predict(X_train)),
+            input_example=X_train.head(5),
+        )
+
+        version = mlflow.register_model(
+            model_uri=f"runs:/{run.info.run_id}/model",
+            name=REGISTERED_MODEL_NAME,
+        )
+
+    return {
+        "modelo": familia,
+        "params": params,
+        "version": version.version,
+        "run_id": run.info.run_id,
+        **metricas,
+    }
+
+
+def main() -> None:
+    train, test = cargar_datos_de_entrenamiento()
+    print(
+        f"Entrenamiento: {len(train):,} viajes hasta "
+        f"{test['started_at'].min():%Y-%m-%d %H:%M}"
+    )
     print(f"Prueba:        {len(test):,} viajes desde esa fecha\n")
 
-    mejor_version, mejor_mae = None, float("inf")
-
-    for config in CONFIGS:
-        with mlflow.start_run(run_name=config["model_family"]) as run:
-            pipeline = Pipeline(
-                [
-                    ("preprocesamiento", construir_preprocesador()),
-                    ("modelo", config["build"](config["params"])),
-                ]
-            )
-            pipeline.fit(X_train, y_train_log)
-            metricas = evaluar(y_test_min, pipeline.predict(X_test))
-
-            mlflow.log_params(config["params"])
-            mlflow.log_metrics(metricas)
-            mlflow.set_tag("model_family", config["model_family"])
-            mlflow.set_tag("split", "temporal_80_20")
-            mlflow.set_tag("target", "log1p(duracion_min)")
-            mlflow.log_param("corte_temporal", f"{corte:%Y-%m-%d %H:%M}")
-            mlflow.log_param("n_train", len(train))
-            mlflow.log_param("n_test", len(test))
-
-            # signature = el contrato de entrada/salida del modelo.
-            mlflow.sklearn.log_model(
-                pipeline,
-                name="model",
-                signature=infer_signature(X_train, pipeline.predict(X_train)),
-                input_example=X_train.head(5),
-            )
-
-            version = mlflow.register_model(
-                model_uri=f"runs:/{run.info.run_id}/model",
-                name=REGISTERED_MODEL_NAME,
-            )
-            print(
-                f"{config['model_family']:<24} "
-                f"MAE {metricas['mae_min']:>5.2f} min | "
-                f"RMSE {metricas['rmse_min']:>6.2f} | "
-                f"R2(log) {metricas['r2_log']:>6.3f} | "
-                f"versión {version.version}"
-            )
-
-            if metricas["mae_min"] < mejor_mae:
-                mejor_mae = metricas["mae_min"]
-                mejor_version = version.version
-
-    # El alias 'champion' es un post-it movible: señala la versión que está
-    # "en producción" sin tocar el código que la consume. Nunca stages:
-    # están deprecados; el curso gobierna con aliases y tags.
-    client.set_registered_model_alias(REGISTERED_MODEL_NAME, "champion", mejor_version)
-
-    runs = mlflow.search_runs(
-        experiment_names=[EXPERIMENT_NAME], order_by=["metrics.mae_min ASC"]
-    )
-    columnas = [
-        "tags.model_family",
-        "metrics.mae_min",
-        "metrics.rmse_min",
-        "metrics.mediana_error_min",
-        "metrics.r2_log",
+    resultados = [
+        entrenar_configuracion(c["model_family"], c["params"]) for c in CONFIGS
     ]
-    print("\nComparación de runs (mejor arriba):")
-    print(runs[columnas].round(3).to_string(index=False))
-    print(
-        f"\nChampion: versión {mejor_version} de '{REGISTERED_MODEL_NAME}' "
-        f"(MAE {mejor_mae:.2f} minutos)"
+    for r in resultados:
+        print(
+            f"{r['modelo']:<24} MAE {r['mae_min']:>5.2f} min | "
+            f"RMSE {r['rmse_min']:>6.2f} | R2(log) {r['r2_log']:>6.3f} | "
+            f"versión {r['version']}"
+        )
+
+    mejor = min(resultados, key=lambda r: r["mae_min"])
+
+    # El alias 'candidate' es una propuesta, no un ascenso. Quién sirve en
+    # producción lo decide scripts/promote.py comparando con el campeón.
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    MlflowClient().set_registered_model_alias(
+        REGISTERED_MODEL_NAME, ALIAS_CANDIDATO, mejor["version"]
     )
+
+    print(
+        f"\nCandidato: versión {mejor['version']} de '{REGISTERED_MODEL_NAME}' "
+        f"(MAE {mejor['mae_min']:.2f} minutos)"
+    )
+    print("Para evaluarlo contra el campeón: uv run python scripts/promote.py")
 
 
 if __name__ == "__main__":

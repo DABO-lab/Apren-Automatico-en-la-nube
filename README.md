@@ -76,6 +76,10 @@ Los notebooks explican y el paquete ejecuta: ninguno duplica la lógica del otro
 📘 **[Guía del proyecto](docs/guia-del-proyecto.md)** — qué hicimos, por qué cada
 decisión y qué encontramos en los datos. Es el documento para ponerse al día.
 
+📋 **[Informe de estado](docs/informe-estado.md)** — dónde va el proyecto, qué
+decisiones se tomaron y por qué, y qué falta. **Empieza por aquí si te vas a poner
+al día o a continuar el trabajo.**
+
 🚀 **[Cómo empezar](docs/como-empezar.md)** — clonar, montar el entorno y trabajar en tu
 propia rama desde VS Code. Empieza por aquí si es tu primera vez en el proyecto.
 
@@ -184,6 +188,25 @@ el campo `p_valor_diria_drift` justamente para dejar esa diferencia a la vista.
 Se alerta cuando **el 30% o más de las columnas** se mueven: una sola es ruido,
 un tercio es otro mes.
 
+## El pipeline orquestado
+
+```bash
+make prefect-ui   # terminal aparte: servidor y tablero en :4200
+uv run prefect config set PREFECT_API_URL=http://127.0.0.1:4200/api   # una sola vez
+make flow         # datos -> variables -> drift -> modelos en paralelo -> candidato
+make promote      # la compuerta: ¿el candidato reemplaza al campeón?
+```
+
+En Windows conviene el servidor fijo: el efímero que Prefect levanta en cada corrida
+falla de forma intermitente con `httpx.ConnectTimeout`.
+
+Corre `make flow` dos veces seguidas para ver el caché: la segunda pasa de ~40 s a ~3 s
+y las cinco tareas salen en estado `Cached`.
+
+El flujo marca el mejor modelo como `candidate` y **ahí se detiene**. La promoción a
+`champion` la decide `make promote`, y solo si el candidato mejora el MAE del campeón
+en al menos un 2%. Un pipeline que se autopromueve no tiene control de calidad.
+
 ## Lo que sigue
 
 - [x] Entorno reproducible con `uv` (`pyproject.toml` + `uv.lock`)
@@ -197,6 +220,7 @@ un tercio es otro mes.
 - [x] Despliegue — API con FastAPI y contenedor Docker (imagen multi-etapa, sin root)
 - [x] Monitoreo — chequeo de drift con umbral calibrado contra una línea base nula
       (reporte JSON + HTML de Evidently + métricas en MLflow)
-- [ ] Orquestación del pipeline
+- [x] Orquestación del pipeline — 5 tareas con caché medido (40 s → 3 s), reintentos
+      y linaje Prefect ↔ MLflow; promoción separada tras una compuerta
 - [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 38 pruebas
       (incluye fixtures rotos a propósito y control negativo)
