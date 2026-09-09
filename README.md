@@ -83,6 +83,19 @@ al día o a continuar el trabajo.**
 🚀 **[Cómo empezar](docs/como-empezar.md)** — clonar, montar el entorno y trabajar en tu
 propia rama desde VS Code. Empieza por aquí si es tu primera vez en el proyecto.
 
+Documentación exigida por la rúbrica del curso (evidencia por dimensión):
+
+- 🗂️ **[Dataset card](docs/dataset-card.md)** — procedencia, licencia, columnas,
+  sesgos y las tres formas de fuga de información descartadas.
+- 🧠 **[Model card](docs/model-card.md)** — qué hace el modelo, métricas del
+  `champion` vigente y sus limitaciones. Se regenera con `make model-card`.
+- 🧭 **[ADR 000 — stack](docs/adr/000-stack.md)** — por qué cada herramienta,
+  qué alternativas se descartaron y por qué.
+- 🔁 **[Política de reentrenamiento](docs/politica-de-reentrenamiento.md)** —
+  qué dispara un reentrenamiento, quién aprueba la promoción y cómo revertirla.
+- ⚠️ **[Riesgos](docs/riesgos.md)** — cinco riesgos concretos del sistema y cómo
+  se detectaría cada uno.
+
 ## Puesta en marcha
 
 ```bash
