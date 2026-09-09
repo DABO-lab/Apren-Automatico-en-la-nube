@@ -139,13 +139,13 @@ entrenamiento, y orquestar todo con caché.
 
 | Dimensión | Peso | Estado | Dónde vive |
 |---|---:|---|---|
-| Reproducibilidad | 15% | ✅ | `uv.lock`, `Makefile`, `docs/` |
-| Datos | 15% | ✅ | `data/contract.py` + fixtures rotos |
-| Tracking y registry | 15% | ✅ | `models/train.py`, MLflow, alias |
-| Pipeline | 15% | ✅ | `flows/training.py` (Prefect) |
-| Deployment | 15% | ✅ | `api/`, `Dockerfile` |
-| Monitoreo | 15% | ✅ | `monitoring/`, umbral calibrado |
-| Ingeniería y documentación | 10% | ✅ | 43 pruebas, `docs/`, README |
+| Reproducibilidad | 15% | Sí | `uv.lock`, `Makefile`, `docs/` |
+| Datos | 15% | Sí | `data/contract.py` + fixtures rotos |
+| Tracking y registry | 15% | Sí | `models/train.py`, MLflow, alias |
+| Pipeline | 15% | Sí | `flows/training.py` (Prefect) |
+| Deployment | 15% | Sí | `api/`, `Dockerfile` |
+| Monitoreo | 15% | Sí | `monitoring/`, reporte de drift real en `reports/` |
+| Ingeniería y documentación | 10% | Sí | 43 pruebas, `docs/`, README |
 
 Lo que queda es refinamiento, no construcción (sección 9).
 
@@ -493,52 +493,93 @@ Prefijos: `feat:` algo nuevo · `fix:` corrección · `docs:` documentación ·
 
 ## 9. Lo que falta, por orden de rendimiento
 
-### 9.1 CI/CD con GitHub Actions — lo más valioso que queda
+> **Actualización del 9 de septiembre de 2026 (tarde).** María Jimena, con apoyo de un
+> asistente de Claude, cerró los puntos 9.1 y 9.3 de esta lista, y además cubrió
+> documentación y monitoreo que ni siquiera estaban en esta lista original. Todo quedó
+> en 4 Pull Requests mergeados a `main`: **#14, #15, #16 y #17**, bajo la cuenta de
+> GitHub `yeseniariveragu11-cmd`, en la rama `Aprendizaje-Yese`. El detalle completo
+> está en la nueva **sección 9.6**, al final de este bloque — léela antes de seguir,
+> para no rehacer trabajo que ya está hecho.
+
+### 9.1 CI/CD con GitHub Actions — HECHO (PR #14, arreglado en PR #15)
 
 La rúbrica pide, para el nivel máximo, *"CI completo con gate de promoción"*. La
-compuerta ya existe (`scripts/promote.py`); falta el flujo de GitHub Actions que:
+compuerta ya existe (`scripts/promote.py`); el flujo de GitHub Actions vive en
+`.github/workflows/ci.yml` y hace justo lo que pedía este punto:
 
-- en cada pull request corra `make lint` y `make test`;
-- en `main` corra el pipeline y llame a la compuerta.
+- en cada pull request corre `make lint` y `make test`;
+- en `main` corre el pipeline con datos sintéticos y llama a la compuerta de promoción.
 
-**Ojo con una penalización específica**: usar `|| true` en un paso de CI resta 5 puntos.
-Es la trampa de hacer que el CI "pase siempre".
+**Sin `|| true` en ningún paso** — la compuerta solo tolera sus propios códigos de
+salida válidos (0 = promovió, 1 = decisión válida de no promover); un código 2 (error
+real) sí tumba el CI.
 
-Esfuerzo: una sesión.
-
-### 9.2 Llegar a 20 corridas en MLflow
+### 9.2 Llegar a 20 corridas en MLflow — pendiente
 
 El nivel 5 de tracking pide **≥20 runs con aliases**. Hoy hay 4 más las de drift. Sale
 casi gratis ampliando la lista `CONFIGS` en `src/trips/models/train.py` con más
 combinaciones de hiperparámetros: el flujo las entrena en paralelo y las registra todas.
 
+Ya hay un diseño pensado para esto (ver sección 9.6): 1 baseline + 7 configuraciones de
+Ridge + 12 de HistGradientBoosting, taguear cada corrida con el id de una corrida
+"padre" sin usar `mlflow.start_run(nested=True)` (riesgo de condición de carrera con
+las tareas paralelas de Prefect) y sin tocar la firma de la tarea cacheada en
+`flows/training.py` (para no repetir el bug de caché de la sección 6.10).
+
 Esfuerzo: media hora, más cómputo.
 
-### 9.3 Limpiar las salidas de los notebooks
+### 9.3 Limpiar las salidas de los notebooks — HECHO (PR #16)
 
-Los notebooks se commitean con sus figuras dentro. La rúbrica lo penaliza con **−3
-décimas** porque hace los diffs ilegibles. Se arregla con un hook que las limpie.
+Los notebooks ya se commitean sin salidas: el hook `nbstripout` (en
+`.pre-commit-config.yaml`) las limpia automáticamente en cada commit. El equipo decidió
+limpiar porque `docs/guia-del-proyecto.md` ya cuenta todos los hallazgos con sus
+números, así que no hace falta ejecutar el notebook para verlos.
 
-**Es una decisión del equipo**: sin salidas, el profesor tendría que ejecutarlos para
-ver las gráficas. El argumento a favor de limpiarlas es que `docs/guia-del-proyecto.md`
-ya cuenta todos los hallazgos con sus números.
+### 9.4 Drift contra agosto de verdad — parcialmente hecho (PR #17)
 
-### 9.4 Drift contra agosto de verdad
-
-Hoy el chequeo compara los últimos días de julio contra los primeros. Cuando Citi Bike
+Ya existe un reporte de drift **real y versionado** (`reports/drift.json` y
+`reports/drift.html`, generados con `make drift` sobre los datos reales), comparando
+los primeros 25 días de julio contra los últimos 6 — eso es lo que pide la rúbrica para
+nivel 3 ("dos particiones reales"). Lo que falta es específicamente la comparación
+**entre meses**, más interesante que el artefacto de la partición. Cuando Citi Bike
 publique agosto:
 
 ```powershell
 uv run python -m trips.monitoring.check_drift --referencia data/processed/viajes_limpio.parquet --actual data/processed/agosto_limpio.parquet
 ```
 
-Ahí se vería drift real entre meses, mucho más interesante que el artefacto de la
-partición.
-
-### 9.5 Despliegue en la nube (opcional)
+### 9.5 Despliegue en la nube (opcional) — pendiente
 
 La rúbrica dice explícitamente que un despliegue local bien hecho vale igual que uno en
 la nube. Con la imagen ya construida, subirla es más trámite que reto.
+
+### 9.6 Lo que agregó María Jimena — detalle para quien continúe (humano o IA)
+
+Cuatro Pull Requests, todos mergeados a `main`, todos bajo Conventional Commits
+(`tipo: descripción`, como pide el profesor):
+
+- **PR #14 — `feat: CI con GitHub Actions`**: el archivo `.github/workflows/ci.yml`
+  completo (ver 9.1), más `src/trips/data/synthetic.py` y `scripts/generar_datos_ci.py`
+  para que el CI tenga datos sintéticos sin depender del CSV real (que no se versiona).
+- **PR #15 — `fix: fijar astral-sh/setup-uv`**: el CI fallaba porque la acción de
+  GitHub no tiene una etiqueta flotante `v10`; se fijó a `v10.0.1`, la versión exacta.
+- **PR #16 — documentación e ingeniería**: cinco documentos nuevos
+  (`docs/dataset-card.md`, `docs/model-card.md`, `docs/adr/000-stack.md`,
+  `docs/politica-de-reentrenamiento.md`, `docs/riesgos.md`), `scripts/model_card.py`
+  (regenera el model card desde MLflow con `make model-card`), `scripts/smoke.py`
+  (chequeo rápido del entorno con `make smoke`), dos hooks nuevos de pre-commit
+  (`gitleaks` contra secretos, `nbstripout` contra outputs de notebooks) y los
+  notebooks ya limpios (ver 9.3).
+- **PR #17 — monitoreo**: los umbrales de drift (`PSI_MODERADO`, `CRAMER_MINIMO`, etc.)
+  se centralizaron en `config.py` — antes estaban repartidos entre dos archivos — y se
+  generó y versionó la evidencia real de drift (ver 9.4). El `.gitignore` cambió: antes
+  ignoraba toda la carpeta `reports/`, ahora versiona específicamente `drift.json` y
+  `drift.html`.
+
+**Si retomas esto con Claude (o cualquier asistente de IA): pégale este documento
+completo.** Tiene todo el contexto — decisiones, números y ahora también lo que ya se
+hizo después de la versión original de este informe. Los puntos 9.2, 9.4 (la parte de
+agosto) y 9.5 siguen abiertos; el 9.1 y el 9.3 ya no hay que tocarlos.
 
 ---
 
