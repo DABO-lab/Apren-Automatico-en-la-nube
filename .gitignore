@@ -29,6 +29,7 @@ Thumbs.db
 data/raw/*
 data/processed/*
 !data/raw/.gitkeep
+!data/raw/metadata.json
 !data/processed/.gitkeep
 
 # Jupyter

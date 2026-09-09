@@ -1,4 +1,4 @@
-.PHONY: setup data features mlflow train flow promote prefect-ui api docker-build docker-run drift test lint notebook
+.PHONY: setup data features mlflow train flow promote prefect-ui api docker-build docker-run drift test lint notebook model-card smoke
 
 # Instala las dependencias exactas del uv.lock y activa el hook de pre-commit
 setup:
@@ -70,3 +70,12 @@ lint:
 # Abre Jupyter Lab en el entorno del proyecto
 notebook:
 	uv run jupyter lab
+
+# Reescribe docs/model-card.md desde el alias @champion vigente en MLflow
+model-card:
+	uv run python scripts/model_card.py
+
+# Diagnostica el entorno (uv, paquetes, puertos, hooks) antes de tocar nada mas.
+# Sale con codigo != 0 si algo falta.
+smoke:
+	uv run python scripts/smoke.py

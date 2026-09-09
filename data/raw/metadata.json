@@ -1,0 +1,17 @@
+{
+  "archivo": "JC-202607-citibike-tripdata.csv",
+  "fuente": "https://citibikenyc.com/system-data",
+  "licencia": "https://www.citibikenyc.com/data-sharing-policy",
+  "periodo": "2026-07-01 a 2026-07-31",
+  "cobertura_geografica": "Jersey City y Hoboken, Nueva Jersey",
+  "filas": 109095,
+  "columnas": 13,
+  "sha256": null,
+  "sha256_nota": "TODO: pendiente de calcular por quien tiene el archivo original (Dubian, ver seccion 1.5 de docs/informe-estado.md). Calcular con: sha256sum data/raw/JC-202607-citibike-tripdata.csv",
+  "descargado_por": "equipo del proyecto",
+  "descargado_el": "2026-07",
+  "no_versionado_por": [
+    "tamano del archivo",
+    "la licencia prohibe redistribuir los datos como dataset independiente (ver docs/dataset-card.md)"
+  ]
+}
