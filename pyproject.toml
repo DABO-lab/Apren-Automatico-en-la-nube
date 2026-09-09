@@ -16,6 +16,7 @@ dependencies = [
     "evidently>=0.7",
     "fastapi>=0.141.1",
     "uvicorn[standard]>=0.52.4",
+    "prefect>=3.8.5",
 ]
 
 [dependency-groups]

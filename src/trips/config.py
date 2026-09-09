@@ -99,3 +99,20 @@ NUMERIC_FEATURES = ["distancia_km"]
 CATEGORICAL_FEATURES = ["member_casual", "rideable_type", "hora", "dia_semana"]
 
 FEATURE_COLUMNS = NUMERIC_FEATURES + CATEGORICAL_FEATURES
+
+# --- Promoción de modelos ---------------------------------------------------
+# Dos alias, dos significados. `candidate` lo pone el pipeline de
+# entrenamiento: "esta es la mejor de esta corrida". `champion` lo pone la
+# compuerta de promoción (scripts/promote.py) y es el que sirve la API.
+# Separarlos es lo que impide que un reentrenamiento con datos malos entre a
+# producción sin que nadie lo mire.
+ALIAS_CANDIDATO = "candidate"
+ALIAS_CAMPEON = "champion"
+
+# La métrica que decide, en minutos y sobre el conjunto de prueba temporal.
+METRICA_DE_PROMOCION = "mae_min"
+
+# Cuánto tiene que mejorar el candidato para justificar el cambio. Un 2% es
+# suficiente para no cambiar el modelo por ruido de muestreo, y bajo como para
+# no bloquear mejoras reales.
+MARGEN_DE_MEJORA = 0.02
