@@ -116,3 +116,23 @@ METRICA_DE_PROMOCION = "mae_min"
 # suficiente para no cambiar el modelo por ruido de muestreo, y bajo como para
 # no bloquear mejoras reales.
 MARGEN_DE_MEJORA = 0.02
+
+# --- Monitoreo (drift) ------------------------------------------------------
+# Umbrales calibrados contra el ruido del propio estadístico (ver
+# trips.monitoring.estadistico.linea_base_nula y docs/riesgos.md), no folclore
+# de industria tomado sin verificar contra estos datos.
+
+# PSI: convención de la industria (crédito y riesgo), donde nació la medida.
+PSI_MODERADO = 0.10
+PSI_ALTO = 0.25
+
+# V de Cramér: 0,1 es el piso de "efecto pequeño" en la convención de Cohen.
+CRAMER_MINIMO = 0.10
+
+# Umbral a nivel del conjunto: una columna movida es ruido; un tercio de las
+# columnas movidas es otro mes.
+FRACCION_COLUMNAS_PARA_ALERTAR = 0.30
+
+# Por debajo de esto no se concluye nada: "no evaluable" y "sin drift" son
+# cosas distintas.
+MINIMO_FILAS_DRIFT = 1_000
