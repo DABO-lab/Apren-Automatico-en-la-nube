@@ -1,4 +1,4 @@
-.PHONY: setup data features mlflow train flow promote prefect-ui api docker-build docker-run drift test lint notebook model-card smoke
+.PHONY: setup data features mlflow train flow flow-serve promote prefect-ui api docker-build docker-run drift test lint notebook model-card smoke
 
 # Instala las dependencias exactas del uv.lock y activa el hook de pre-commit
 setup:
@@ -22,16 +22,22 @@ features:
 mlflow:
 	uv run python -m mlflow server --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001 --workers 1 --allowed-hosts "localhost:5001,127.0.0.1:5001,host.docker.internal:5001"
 
-# Entrena los 3 modelos, los registra y marca el mejor como 'champion'
+# Entrena las 20 configuraciones (1 baseline + 7 ridge + 12 histgb), las
+# registra y marca la mejor como 'candidate'
 train:
 	uv run python -m trips.models.train
 
-# Levanta la API que sirve el modelo champion (MLflow debe estar arriba)
-# Corre el pipeline completo orquestado con Prefect:
+# Corre el pipeline completo orquestado con Prefect, UNA vez:
 # datos -> variables -> drift -> modelos en paralelo -> candidato
 # La segunda corrida sobre los mismos datos sale de cache (~40 s -> ~1 s)
 flow:
 	uv run python -m trips.flows.training
+
+# Deja el flujo corriendo con un schedule (3 a.m. todos los dias), visible
+# en la pestana Deployments de http://127.0.0.1:4200. Requiere 'make
+# prefect-ui' arriba. Queda en primer plano: usa otra terminal.
+flow-serve:
+	uv run python -m trips.flows.training --serve
 
 # La compuerta: promueve el candidato a champion solo si mejora lo suficiente
 promote:
