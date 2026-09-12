@@ -44,16 +44,33 @@ from trips.config import (
 )
 from trips.features import add_features
 
-# Las configuraciones a comparar. La primera no aprende nada: siempre predice
-# la mediana. Es la vara de medir — cualquier modelo que no le gane no está
-# aportando información, solo consumiendo electricidad.
+# Las configuraciones a comparar: 1 baseline + 7 de Ridge + 12 de
+# HistGradientBoosting = 20 corridas. La primera no aprende nada: siempre
+# predice la mediana. Es la vara de medir — cualquier modelo que no le gane
+# no está aportando información, solo consumiendo electricidad.
+#
+# Son 20 corridas "planas" (un run por configuración), no runs anidados
+# (parent/child con mlflow.start_run(nested=True)): cuando el flujo de
+# Prefect las lanza en paralelo con .submit(), varias corridas comparten
+# hilo al mismo tiempo y anidar por contexto de proceso es una condición de
+# carrera -un hijo puede terminar registrado bajo el padre equivocado-. En
+# su lugar, todas quedan agrupadas por la etiqueta `grupo_busqueda` (o
+# `prefect_run_id` cuando las lanza el flujo), que es segura entre hilos y
+# se puede filtrar igual en la UI de MLflow.
 CONFIGS = [
     {"model_family": "baseline_mediana", "params": {"strategy": "median"}},
-    {"model_family": "ridge", "params": {"alpha": 1.0}},
-    {
-        "model_family": "hist_gradient_boosting",
-        "params": {"max_iter": 300, "learning_rate": 0.1},
-    },
+    *[
+        {"model_family": "ridge", "params": {"alpha": alpha}}
+        for alpha in [0.01, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0]
+    ],
+    *[
+        {
+            "model_family": "hist_gradient_boosting",
+            "params": {"max_iter": max_iter, "learning_rate": learning_rate},
+        }
+        for max_iter in (100, 300, 500)
+        for learning_rate in (0.03, 0.1, 0.3, 0.5)
+    ],
 ]
 
 
@@ -185,8 +202,17 @@ def main() -> None:
     )
     print(f"Prueba:        {len(test):,} viajes desde esa fecha\n")
 
+    # Agrupa las 20 corridas de esta búsqueda sin usar runs anidados (ver el
+    # comentario junto a CONFIGS): un id compartido que se puede filtrar en
+    # la UI de MLflow, igual que 'prefect_run_id' cuando corre por el flujo.
+    grupo_busqueda = f"busqueda-{pd.Timestamp.now():%Y%m%d-%H%M%S}"
     resultados = [
-        entrenar_configuracion(c["model_family"], c["params"]) for c in CONFIGS
+        entrenar_configuracion(
+            c["model_family"],
+            c["params"],
+            tags={"grupo_busqueda": grupo_busqueda, "trial": str(i)},
+        )
+        for i, c in enumerate(CONFIGS)
     ]
     for r in resultados:
         print(
