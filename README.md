@@ -126,13 +126,39 @@ uv run jupyter lab
 
 ### Dónde está el CSV
 
-Como el archivo crudo no se versiona, cada integrante trabaja con su propia copia.
-La ruta por defecto está en `src/trips/config.py`; para apuntar a la tuya, define
-la variable de entorno `TRIPS_RAW_DATA` antes de ejecutar:
+Como el archivo crudo no se versiona, cada integrante (y quien clone el repositorio
+para revisarlo) trabaja con su propia copia.
+
+**Para descargarlo:**
+
+```bash
+curl -L -o JC-202607-citibike-tripdata.csv.zip \
+  https://s3.amazonaws.com/tripdata/JC-202607-citibike-tripdata.csv.zip
+unzip JC-202607-citibike-tripdata.csv.zip -d data/raw/
+```
+
+(Fuente oficial: <https://citibikenyc.com/system-data>, sección Jersey City/Hoboken —
+archivos con el prefijo `JC-`.)
+
+La ruta por defecto está en `src/trips/config.py` (`data/raw/JC-202607-citibike-tripdata.csv`).
+Si guardas el archivo en otro sitio, apunta a él con la variable de entorno
+`TRIPS_RAW_DATA` antes de ejecutar:
 
 ```powershell
 $env:TRIPS_RAW_DATA = "C:\ruta\a\JC-202607-citibike-tripdata.csv"
 ```
+
+**Para verificar el pipeline SIN el CSV real** (por ejemplo, para confirmar que
+`make train`/`make flow` corren de punta a punta antes de conseguir el archivo):
+
+```bash
+uv run python scripts/generar_datos_ci.py \
+  --salida data/raw/JC-202607-citibike-tripdata.csv --filas 5000
+```
+
+Genera un CSV sintético con la forma correcta (misma semilla que usa el CI en
+`.github/workflows/ci.yml`). Las métricas que salgan de ahí no significan nada sobre
+viajes reales — sirve solo para probar que el código corre, no para evaluar el modelo.
 
 ## Servir el modelo
 
