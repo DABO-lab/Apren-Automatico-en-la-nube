@@ -72,6 +72,10 @@ class LoteResponse(BaseModel):
 class SaludResponse(BaseModel):
     estado: str
     modelo_cargado: bool
+    version_modelo: str | None = Field(
+        default=None,
+        description="Versión del modelo servido, o null si no hay modelo cargado",
+    )
 
 
 class ModeloResponse(BaseModel):
