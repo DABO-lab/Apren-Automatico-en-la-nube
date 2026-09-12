@@ -68,6 +68,12 @@ def cargar_modelo() -> ModeloServido:
     return ModeloServido(
         pyfunc=mlflow.pyfunc.load_model(uri),
         nombre=REGISTERED_MODEL_NAME,
-        version=version.version,
+        # MlflowClient().get_model_version_by_alias(...).version es un int en
+        # MLflow 3.15 (en versiones anteriores del cliente era str). El
+        # dataclass declara version: str porque así lo espera toda la API
+        # (PrediccionResponse, ModeloResponse) — sin este cast, /predict
+        # rompía con un 500 de validación de Pydantic en cuanto había un
+        # modelo real cargado (ver tests/api/test_main.py).
+        version=str(version.version),
         uri=uri,
     )
