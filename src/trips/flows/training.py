@@ -105,7 +105,7 @@ def construir_variables(huella_limpio: str) -> dict:
 
 
 @task(name="entrenar", cache_policy=CACHE, cache_expiration=VIGENCIA)
-def entrenar(huella_limpio: str, nombre_config: str, params: dict) -> dict:
+def entrenar(huella_limpio: str, nombre_config: str, params: dict, trial: int) -> dict:
     """Entrena UNA configuración y la registra como una versión del modelo.
 
     Es una tarea por configuración a propósito: Prefect las corre en paralelo,
@@ -121,7 +121,9 @@ def entrenar(huella_limpio: str, nombre_config: str, params: dict) -> dict:
     log = get_run_logger()
     run_prefect = str(get_run_context().task_run.flow_run_id)
     resultado = entrenar_configuracion(
-        nombre_config, params, tags={"prefect_run_id": run_prefect}
+        nombre_config,
+        params,
+        tags={"prefect_run_id": run_prefect, "trial": str(trial)},
     )
     log.info(
         "%s -> MAE %.3f min (versión %s)",
@@ -197,8 +199,8 @@ def flujo_entrenamiento(configuraciones: list[dict] | None = None) -> dict:
 
     # .submit() las lanza en paralelo; .result() espera a que terminen.
     futuros = [
-        entrenar.submit(huella_limpio, c["model_family"], c["params"])
-        for c in configuraciones
+        entrenar.submit(huella_limpio, c["model_family"], c["params"], i)
+        for i, c in enumerate(configuraciones)
     ]
     resultados = [f.result() for f in futuros]
 
