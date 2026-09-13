@@ -124,7 +124,7 @@ Expone, entre otras:
   incluso antes de correr el reporte de `drift` formal.
 
 Un dashboard de referencia, versionado, está en
-`observabilidad/grafana/dashboards/api-modelo.json`.
+`observabilidad/grafana/dashboard-api-modelo.json`.
 
 ---
 

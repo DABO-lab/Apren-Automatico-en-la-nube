@@ -87,9 +87,13 @@ credencial). Este proyecto no usa credenciales de servicios en la nube hoy
 entorno `MLFLOW_TRACKING_URI` sí podría apuntar a un servidor remoto con
 credenciales embebidas si alguien la exportara mal en el futuro.
 
-**Detección:** ninguna automática todavía — no hay `gitleaks` ni un hook
-equivalente corriendo en pre-commit ni en CI en el momento de escribir esto.
+**Detección:** desde el PR #16, `gitleaks` corre como hook de
+`.pre-commit-config.yaml` — en cada commit local, y también en CI dentro del
+paso `uv run pre-commit run --all-files` de `.github/workflows/ci.yml`. Lo que
+sigue sin existir es un chequeo retroactivo del historial ya escrito: un
+secreto que ya estuviera en un commit viejo (de antes del PR #16) no lo
+detecta un hook que solo mira el commit que se está creando.
 
-**Mitigación:** agregar `gitleaks` a `.pre-commit-config.yaml` (ver el lote de
-ingeniería del proyecto) para que un secreto se detecte **antes** del commit,
-que es el único momento en que "detectarlo" todavía sirve de algo.
+**Mitigación:** si alguna vez se sospecha que algo se coló antes de tener el
+hook, correr `gitleaks detect` (sin `--staged`, sobre todo el historial) es
+el siguiente paso — no está automatizado todavía.

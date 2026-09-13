@@ -73,27 +73,27 @@ Makefile           los comandos del proyecto
 
 Los notebooks explican y el paquete ejecuta: ninguno duplica la lógica del otro.
 
-📘 **[Guía del proyecto](docs/guia-del-proyecto.md)** — qué hicimos, por qué cada
+**[Guía del proyecto](docs/guia-del-proyecto.md)** — qué hicimos, por qué cada
 decisión y qué encontramos en los datos. Es el documento para ponerse al día.
 
-📋 **[Informe de estado](docs/informe-estado.md)** — dónde va el proyecto, qué
+**[Informe de estado](docs/informe-estado.md)** — dónde va el proyecto, qué
 decisiones se tomaron y por qué, y qué falta. **Empieza por aquí si te vas a poner
 al día o a continuar el trabajo.**
 
-🚀 **[Cómo empezar](docs/como-empezar.md)** — clonar, montar el entorno y trabajar en tu
+**[Cómo empezar](docs/como-empezar.md)** — clonar, montar el entorno y trabajar en tu
 propia rama desde VS Code. Empieza por aquí si es tu primera vez en el proyecto.
 
 Documentación exigida por la rúbrica del curso (evidencia por dimensión):
 
-- 🗂️ **[Dataset card](docs/dataset-card.md)** — procedencia, licencia, columnas,
+- **[Dataset card](docs/dataset-card.md)** — procedencia, licencia, columnas,
   sesgos y las tres formas de fuga de información descartadas.
-- 🧠 **[Model card](docs/model-card.md)** — qué hace el modelo, métricas del
+- **[Model card](docs/model-card.md)** — qué hace el modelo, métricas del
   `champion` vigente y sus limitaciones. Se regenera con `make model-card`.
-- 🧭 **[ADR 000 — stack](docs/adr/000-stack.md)** — por qué cada herramienta,
+- **[ADR 000 — stack](docs/adr/000-stack.md)** — por qué cada herramienta,
   qué alternativas se descartaron y por qué.
-- 🔁 **[Política de reentrenamiento](docs/politica-de-reentrenamiento.md)** —
+- **[Política de reentrenamiento](docs/politica-de-reentrenamiento.md)** —
   qué dispara un reentrenamiento, quién aprueba la promoción y cómo revertirla.
-- ⚠️ **[Riesgos](docs/riesgos.md)** — cinco riesgos concretos del sistema y cómo
+- **[Riesgos](docs/riesgos.md)** — cinco riesgos concretos del sistema y cómo
   se detectaría cada uno.
 
 ## Puesta en marcha
@@ -262,5 +262,5 @@ en al menos un 2%. Un pipeline que se autopromueve no tiene control de calidad.
       (reporte JSON + HTML de Evidently + métricas en MLflow)
 - [x] Orquestación del pipeline — 5 tareas con caché medido (40 s → 3 s), reintentos
       y linaje Prefect ↔ MLflow; promoción separada tras una compuerta
-- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 38 pruebas
+- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 50 pruebas
       (incluye fixtures rotos a propósito y control negativo)
