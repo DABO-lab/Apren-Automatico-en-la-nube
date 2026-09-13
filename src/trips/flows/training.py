@@ -22,6 +22,7 @@ autopromueve no tiene compuerta: cualquier reentrenamiento con datos malos
 entraría a producción solo. La promoción vive en `scripts/promote.py`.
 """
 
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -29,6 +30,7 @@ import mlflow
 import pandas as pd
 from mlflow import MlflowClient
 from prefect import flow, get_run_logger, task
+from prefect.artifacts import create_table_artifact
 from prefect.cache_policies import INPUTS, TASK_SOURCE
 from prefect.context import get_run_context
 
@@ -105,7 +107,7 @@ def construir_variables(huella_limpio: str) -> dict:
 
 
 @task(name="entrenar", cache_policy=CACHE, cache_expiration=VIGENCIA)
-def entrenar(huella_limpio: str, nombre_config: str, params: dict) -> dict:
+def entrenar(huella_limpio: str, nombre_config: str, params: dict, trial: int) -> dict:
     """Entrena UNA configuración y la registra como una versión del modelo.
 
     Es una tarea por configuración a propósito: Prefect las corre en paralelo,
@@ -121,7 +123,9 @@ def entrenar(huella_limpio: str, nombre_config: str, params: dict) -> dict:
     log = get_run_logger()
     run_prefect = str(get_run_context().task_run.flow_run_id)
     resultado = entrenar_configuracion(
-        nombre_config, params, tags={"prefect_run_id": run_prefect}
+        nombre_config,
+        params,
+        tags={"prefect_run_id": run_prefect, "trial": str(trial)},
     )
     log.info(
         "%s -> MAE %.3f min (versión %s)",
@@ -197,12 +201,34 @@ def flujo_entrenamiento(configuraciones: list[dict] | None = None) -> dict:
 
     # .submit() las lanza en paralelo; .result() espera a que terminen.
     futuros = [
-        entrenar.submit(huella_limpio, c["model_family"], c["params"])
-        for c in configuraciones
+        entrenar.submit(huella_limpio, c["model_family"], c["params"], i)
+        for i, c in enumerate(configuraciones)
     ]
     resultados = [f.result() for f in futuros]
 
     mejor = marcar_candidato(resultados)
+
+    # La tabla queda junto a la corrida en la UI de Prefect (pestaña
+    # Artifacts): quien revise el flujo ve las métricas de las 20
+    # configuraciones sin tener que abrir MLflow aparte.
+    create_table_artifact(
+        key="resultados-entrenamiento",
+        table=[
+            {
+                "modelo": r["modelo"],
+                "params": str(r["params"]),
+                "mae_min": round(r["mae_min"], 3),
+                "rmse_min": round(r["rmse_min"], 3),
+                "r2_log": round(r["r2_log"], 3),
+                "version": r["version"],
+            }
+            for r in sorted(resultados, key=lambda r: r["mae_min"])
+        ],
+        description=(
+            f"Métricas de las {len(resultados)} configuraciones de esta corrida, "
+            "ordenadas por MAE ascendente. La primera fila es el candidato."
+        ),
+    )
 
     resumen = {
         "prefect_run_id": run_prefect,
@@ -220,4 +246,15 @@ def flujo_entrenamiento(configuraciones: list[dict] | None = None) -> dict:
 
 
 if __name__ == "__main__":
-    flujo_entrenamiento()
+    if "--serve" in sys.argv:
+        # flow.serve() deja un proceso corriendo que dispara el flujo solo,
+        # con el schedule visible en la pestaña Deployments de la UI de
+        # Prefect (http://127.0.0.1:4200) — a diferencia de 'make flow', que
+        # corre una vez y termina. Requiere 'uv run prefect server start'
+        # arriba (ver docs/informe-estado.md sección 5).
+        flujo_entrenamiento.serve(
+            name="entrenamiento-viajes-diario",
+            cron="0 3 * * *",  # 3 a.m.: fuera de horas pico de uso de la API
+        )
+    else:
+        flujo_entrenamiento()

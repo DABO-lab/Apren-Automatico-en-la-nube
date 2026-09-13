@@ -10,10 +10,12 @@ del registry al iniciar.
 """
 
 import logging
+import time
 from contextlib import asynccontextmanager
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 from trips.api.modelo import ALIAS, ModeloServido, cargar_modelo
 from trips.api.schemas import (
@@ -27,6 +29,29 @@ from trips.api.schemas import (
 from trips.config import FEATURE_COLUMNS, TARGET_COLUMN
 
 log = logging.getLogger("trips.api")
+
+# Métricas del SERVICIO: cuántas peticiones llegan, qué tan rápido responde,
+# qué está prediciendo. Esto es distinto de lo que mide
+# `trips.monitoring.check_drift` (el reporte de `make drift`), que compara
+# la distribución de los DATOS de entrada contra la de entrenamiento.
+# Prometheus vigila si la API está sana; el reporte de drift vigila si el
+# mundo todavía se parece a lo que aprendió el modelo. Las dos preguntas son
+# necesarias y ninguna sustituye a la otra: la API puede responder rápido y
+# sano mientras predice sobre datos que ya no se parecen a julio.
+PREDICCIONES_TOTAL = Counter(
+    "trips_predicciones_total",
+    "Peticiones a /predict y /predict/batch, por resultado.",
+    ["resultado"],
+)
+PREDICCION_LATENCIA_SEGUNDOS = Histogram(
+    "trips_prediccion_latencia_segundos",
+    "Tiempo que tarda una predicción individual en resolverse.",
+)
+PREDICCION_DURACION_MIN = Histogram(
+    "trips_prediccion_duracion_min",
+    "Distribución de las duraciones que predice el modelo, en minutos.",
+    buckets=(1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120),
+)
 
 # El modelo se carga UNA vez al arrancar, no en cada petición: cargarlo
 # tarda segundos y una API que lo hiciera por petición sería inservible.
@@ -79,7 +104,19 @@ def _modelo() -> ModeloServido:
 @app.get("/health", response_model=SaludResponse)
 def health() -> SaludResponse:
     """Señal de vida. Responde 200 aunque el modelo no haya cargado."""
-    return SaludResponse(estado="ok", modelo_cargado=estado["modelo"] is not None)
+    modelo = estado["modelo"]
+    return SaludResponse(
+        estado="ok",
+        modelo_cargado=modelo is not None,
+        version_modelo=modelo.version if modelo is not None else None,
+    )
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    """Métricas del servicio en formato Prometheus. Ver el comentario junto
+    a las métricas más arriba: esto mide el servicio, no los datos."""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/modelo", response_model=ModeloResponse)
@@ -100,7 +137,15 @@ def info_modelo() -> ModeloResponse:
 def predict(viaje: ViajeRequest) -> PrediccionResponse:
     """Predice la duración de un viaje."""
     modelo = _modelo()
-    resultado = modelo.predecir(pd.DataFrame([viaje.model_dump()])).iloc[0]
+    inicio = time.perf_counter()
+    try:
+        resultado = modelo.predecir(pd.DataFrame([viaje.model_dump()])).iloc[0]
+    except Exception:
+        PREDICCIONES_TOTAL.labels(resultado="error").inc()
+        raise
+    PREDICCION_LATENCIA_SEGUNDOS.observe(time.perf_counter() - inicio)
+    PREDICCION_DURACION_MIN.observe(float(resultado["duracion_min"]))
+    PREDICCIONES_TOTAL.labels(resultado="ok").inc()
     return PrediccionResponse(
         duracion_min=float(resultado["duracion_min"]),
         distancia_km=float(resultado["distancia_km"]),
@@ -117,8 +162,17 @@ def predict_batch(lote: LoteRequest) -> LoteResponse:
     modelo se invoca una vez sobre todo el lote.
     """
     modelo = _modelo()
-    viajes = pd.DataFrame([v.model_dump() for v in lote.viajes])
-    resultados = modelo.predecir(viajes)
+    inicio = time.perf_counter()
+    try:
+        viajes = pd.DataFrame([v.model_dump() for v in lote.viajes])
+        resultados = modelo.predecir(viajes)
+    except Exception:
+        PREDICCIONES_TOTAL.labels(resultado="error").inc(len(lote.viajes))
+        raise
+    PREDICCION_LATENCIA_SEGUNDOS.observe(time.perf_counter() - inicio)
+    PREDICCIONES_TOTAL.labels(resultado="ok").inc(len(resultados))
+    for duracion in resultados["duracion_min"]:
+        PREDICCION_DURACION_MIN.observe(float(duracion))
     return LoteResponse(
         predicciones=[
             PrediccionResponse(

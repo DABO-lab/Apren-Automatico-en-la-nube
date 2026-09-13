@@ -41,6 +41,40 @@ jobs:
       - name: Pruebas (make test)
         run: make test
 
+  construir-imagen-docker:
+    name: Construir imagen Docker y verificar que no corre como root
+    needs: lint-y-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Construir la imagen
+        run: docker build -t trips-api .
+
+      - name: Verificar que el contenedor no corre como root
+        # El Dockerfile crea 'apiuser' (UID 1000) y declara USER apiuser
+        # (ver Dockerfile), pero eso solo es una promesa hasta que algo lo
+        # comprueba: un ENTRYPOINT o una base image mal elegida en un cambio
+        # futuro podría revertirlo en silencio. 'id -u' devuelve 0 solo para
+        # root.
+        run: |
+          uid=$(docker run --rm --entrypoint sh trips-api -c 'id -u')
+          echo "UID dentro del contenedor: $uid"
+          if [ "$uid" -eq 0 ]; then
+            echo "::error::El contenedor corre como root (UID 0)."
+            exit 1
+          fi
+
+      - name: Verificar que el HEALTHCHECK está declarado
+        run: |
+          estado=$(docker inspect --format='{{.Config.Healthcheck}}' trips-api)
+          echo "Healthcheck: $estado"
+          if [ "$estado" = "<nil>" ]; then
+            echo "::error::La imagen no tiene HEALTHCHECK declarado."
+            exit 1
+          fi
+
   pipeline-y-promocion:
     name: Pipeline y compuerta de promoción (main)
     needs: lint-y-test
