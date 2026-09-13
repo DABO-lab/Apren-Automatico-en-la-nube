@@ -262,5 +262,5 @@ en al menos un 2%. Un pipeline que se autopromueve no tiene control de calidad.
       (reporte JSON + HTML de Evidently + métricas en MLflow)
 - [x] Orquestación del pipeline — 5 tareas con caché medido (40 s → 3 s), reintentos
       y linaje Prefect ↔ MLflow; promoción separada tras una compuerta
-- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 38 pruebas
+- [x] Validación de datos y pruebas — contratos Pandera en tres niveles y 50 pruebas
       (incluye fixtures rotos a propósito y control negativo)

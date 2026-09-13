@@ -109,7 +109,7 @@ Si prefieres tenerlo en otra carpeta, define la variable de entorno:
 uv run pytest
 ```
 
-Deben pasar **43 pruebas**. Si pasan, tu entorno está bien montado y puedes seguir con
+Deben pasar **50 pruebas**. Si pasan, tu entorno está bien montado y puedes seguir con
 la sección 4.
 
 ---
@@ -145,7 +145,7 @@ entrenamiento, y orquestar todo con caché.
 | Pipeline | 15% | Sí | `flows/training.py` (Prefect) |
 | Deployment | 15% | Sí | `api/`, `Dockerfile` |
 | Monitoreo | 15% | Sí | `monitoring/`, reporte de drift real en `reports/` |
-| Ingeniería y documentación | 10% | Sí | 43 pruebas, `docs/`, README |
+| Ingeniería y documentación | 10% | Sí | 50 pruebas, `docs/`, README |
 
 Lo que queda es refinamiento, no construcción (sección 9).
 
@@ -174,7 +174,7 @@ src/trips/
   monitoring/check_drift.py   el chequeo, con umbral calibrado y códigos de salida
   flows/training.py    el pipeline orquestado con Prefect
 scripts/promote.py     la compuerta de promoción a producción
-tests/                 43 pruebas
+tests/                 50 pruebas
 docs/                  este informe, la guía de arranque y la guía de estudio
 Dockerfile             imagen de la API: dos etapas, sin root, con healthcheck
 Makefile               todos los comandos del proyecto
@@ -262,7 +262,7 @@ docker run --rm -p 8000:8000 --add-host=host.docker.internal:host-gateway trips-
 | `make api` | la API |
 | `make docker-build` / `make docker-run` | imagen y contenedor |
 | `make drift` | chequeo de drift |
-| `make test` | las 43 pruebas |
+| `make test` | las 50 pruebas |
 | `make lint` | ruff |
 | `make notebook` | Jupyter Lab |
 
@@ -452,7 +452,7 @@ de valer aunque el CSV sea el mismo.
 | Error mediano | 1,33 min |
 | R² sobre el logaritmo | 0,530 |
 | Columnas con drift | 1 de 6 (17%), sin alerta |
-| Pruebas | 43, todas en verde |
+| Pruebas | 50, todas en verde |
 | Caché del pipeline | ~40 s → ~3 s |
 
 ---
@@ -498,8 +498,19 @@ Prefijos: `feat:` algo nuevo · `fix:` corrección · `docs:` documentación ·
 > documentación y monitoreo que ni siquiera estaban en esta lista original. Todo quedó
 > en 4 Pull Requests mergeados a `main`: **#14, #15, #16 y #17**, bajo la cuenta de
 > GitHub `yeseniariveragu11-cmd`, en la rama `Aprendizaje-Yese`. El detalle completo
-> está en la nueva **sección 9.6**, al final de este bloque — léela antes de seguir,
-> para no rehacer trabajo que ya está hecho.
+> está en la sección 9.6, al final de este bloque — léela antes de seguir, para no
+> rehacer trabajo que ya está hecho.
+>
+> **Actualización del 12 de septiembre de 2026.** El PR #18 (rama
+> `Aprendizaje-jime`) cerró también el punto 9.2: las 20 corridas de MLflow. Con
+> esto, de esta sección solo quedan abiertos el 9.4 (drift contra agosto real) y
+> el 9.5 (despliegue en la nube, opcional). Esta misma revisión —hecha por María
+> Jimena, con apoyo de un asistente de Claude, después de comparar todo el
+> repositorio contra esta documentación— también corrigió tres inconsistencias
+> que quedaron sueltas: el número de pruebas (decía 43 en varios lugares y ya
+> eran 50), la ruta del dashboard de Grafana en `docs/api-contract.md`, y una
+> afirmación sobre `gitleaks` en `docs/riesgos.md` que no se actualizó cuando el
+> PR #16 lo agregó.
 
 ### 9.1 CI/CD con GitHub Actions — HECHO (PR #14, arreglado en PR #15)
 
@@ -514,19 +525,15 @@ compuerta ya existe (`scripts/promote.py`); el flujo de GitHub Actions vive en
 salida válidos (0 = promovió, 1 = decisión válida de no promover); un código 2 (error
 real) sí tumba el CI.
 
-### 9.2 Llegar a 20 corridas en MLflow — pendiente
+### 9.2 Llegar a 20 corridas en MLflow — HECHO (PR #18)
 
-El nivel 5 de tracking pide **≥20 runs con aliases**. Hoy hay 4 más las de drift. Sale
-casi gratis ampliando la lista `CONFIGS` en `src/trips/models/train.py` con más
-combinaciones de hiperparámetros: el flujo las entrena en paralelo y las registra todas.
-
-Ya hay un diseño pensado para esto (ver sección 9.6): 1 baseline + 7 configuraciones de
-Ridge + 12 de HistGradientBoosting, taguear cada corrida con el id de una corrida
-"padre" sin usar `mlflow.start_run(nested=True)` (riesgo de condición de carrera con
-las tareas paralelas de Prefect) y sin tocar la firma de la tarea cacheada en
-`flows/training.py` (para no repetir el bug de caché de la sección 6.10).
-
-Esfuerzo: media hora, más cómputo.
+El nivel 5 de tracking pide **≥20 runs con aliases**. `CONFIGS` en
+`src/trips/models/train.py` ya tiene 20 configuraciones: 1 baseline + 7 de Ridge
++ 12 de HistGradientBoosting. Se registran como runs "planos" —no anidados con
+`mlflow.start_run(nested=True)`— agrupados por la etiqueta `grupo_busqueda` (o
+`prefect_run_id` cuando el flujo de Prefect las lanza en paralelo). La razón
+completa, con las alternativas que se descartaron y por qué, está en
+`docs/adr/002-busqueda-de-hiperparametros-sin-runs-anidados.md`.
 
 ### 9.3 Limpiar las salidas de los notebooks — HECHO (PR #16)
 
@@ -555,7 +562,7 @@ la nube. Con la imagen ya construida, subirla es más trámite que reto.
 
 ### 9.6 Lo que agregó María Jimena — detalle para quien continúe (humano o IA)
 
-Cuatro Pull Requests, todos mergeados a `main`, todos bajo Conventional Commits
+Cinco Pull Requests, todos mergeados a `main`, todos bajo Conventional Commits
 (`tipo: descripción`, como pide el profesor):
 
 - **PR #14 — `feat: CI con GitHub Actions`**: el archivo `.github/workflows/ci.yml`
@@ -575,11 +582,20 @@ Cuatro Pull Requests, todos mergeados a `main`, todos bajo Conventional Commits
   generó y versionó la evidencia real de drift (ver 9.4). El `.gitignore` cambió: antes
   ignoraba toda la carpeta `reports/`, ahora versiona específicamente `drift.json` y
   `drift.html`.
+- **PR #18 — tracking, monitoreo del servicio y pipeline** (rama
+  `Aprendizaje-jime`): las 20 corridas de MLflow (ver 9.2 y el ADR 002);
+  métricas Prometheus y un `/health` que informa la versión del modelo servido
+  en la API (`docs/api-contract.md`); un dashboard de Grafana versionado en
+  `observabilidad/grafana/dashboard-api-modelo.json`; un artefacto de métricas
+  y un `schedule` visible en el flujo de Prefect; y el trabajo extra del CI que
+  construye la imagen Docker y comprueba que no corre como root y que el
+  `HEALTHCHECK` está declarado (no solo que el Dockerfile lo prometa). También
+  el ADR 001, que documenta por qué el proyecto no usa `mypy`.
 
 **Si retomas esto con Claude (o cualquier asistente de IA): pégale este documento
 completo.** Tiene todo el contexto — decisiones, números y ahora también lo que ya se
-hizo después de la versión original de este informe. Los puntos 9.2, 9.4 (la parte de
-agosto) y 9.5 siguen abiertos; el 9.1 y el 9.3 ya no hay que tocarlos.
+hizo después de la versión original de este informe. Los puntos 9.4 (la parte de
+agosto) y 9.5 siguen abiertos; el 9.1, el 9.2 y el 9.3 ya no hay que tocarlos.
 
 ---
 
